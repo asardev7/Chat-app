@@ -19,6 +19,7 @@ const ChatContainer = () => {
 
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+  const messageListRef = useRef(null);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -30,20 +31,22 @@ const ChatContainer = () => {
   }, [selectedUser]);
 
   useEffect(() => {
-    if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (messageEndRef.current) {
+      messageEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages]);
 
   if (isMessagesLoading) {
     return (
-      <div className="flex-1 flex flex-col h-full min-h-0 bg-base-200">
+      <div className="flex-1 flex flex-col min-h-0 h-full bg-base-200">
         <div className="shrink-0">
           <ChatHeader />
         </div>
+
         <div className="flex-1 min-h-0 overflow-y-auto">
           <MessageSkeleton />
         </div>
+
         <div className="shrink-0 border-t border-base-300 bg-base-100">
           <MessageInput />
         </div>
@@ -52,12 +55,15 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 bg-base-200">
+    <div className="flex-1 flex flex-col min-h-0 h-full bg-base-200">
       <div className="shrink-0">
         <ChatHeader />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4">
+      <div
+        ref={messageListRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4"
+      >
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-center px-6">
             <div>
@@ -70,7 +76,7 @@ const ChatContainer = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-2">
             {messages.map((message) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
@@ -136,7 +142,7 @@ const ChatContainer = () => {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-base-300 bg-base-100/95 backdrop-blur-md">
+      <div className="shrink-0 border-t border-base-300 bg-base-100">
         <MessageInput />
       </div>
     </div>
