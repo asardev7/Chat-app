@@ -102,7 +102,6 @@ export const useChatStore = create((set, get) => ({
                 gifUrl: "",
                 replyTo: null,
                 deletedForEveryone: true,
-                isEdited: false,
               }
             : msg
         ),
@@ -171,7 +170,6 @@ export const useChatStore = create((set, get) => ({
                 gifUrl: "",
                 replyTo: null,
                 deletedForEveryone: true,
-                isEdited: false,
               }
             : msg
         ),
