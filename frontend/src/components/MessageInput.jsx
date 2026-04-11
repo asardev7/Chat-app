@@ -12,12 +12,17 @@ const MessageInput = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
+    if (!file) return;
+
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
+
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -30,9 +35,13 @@ const MessageInput = () => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
     if (isSending) return;
+
     setIsSending(true);
     try {
-      await sendMessage({ text: text.trim(), image: imagePreview });
+      await sendMessage({
+        text: text.trim(),
+        image: imagePreview,
+      });
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -44,60 +53,57 @@ const MessageInput = () => {
   };
 
   return (
-    <div className="px-3 py-3 border-t border-base-300 bg-base-100">
-
+    <div className="px-3 sm:px-4 py-3">
       {imagePreview && (
-        <div className="mb-2 relative w-fit">
+        <div className="mb-3 inline-flex relative">
           <img
             src={imagePreview}
-            alt="preview"
-            className="h-20 w-20 object-cover rounded-lg border border-base-300"
+            alt="Preview"
+            className="w-20 h-20 object-cover rounded-2xl border border-base-300"
           />
           <button
-            onClick={removeImage}
-            className="absolute -top-1.5 -right-1.5 btn btn-xs btn-circle btn-error"
             type="button"
+            onClick={removeImage}
+            className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-base-100 border border-base-300 flex items-center justify-center shadow-sm hover:bg-base-200 transition-colors"
           >
-            <X className="w-3 h-3" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-
-      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+      <form onSubmit={handleSendMessage} className="flex items-end gap-2 sm:gap-3">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+        />
 
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="btn btn-ghost btn-sm btn-circle flex-shrink-0 text-zinc-400 hover:text-primary"
-          aria-label="Attach image"
+          className="w-11 h-11 shrink-0 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200 flex items-center justify-center transition-colors"
         >
-          <Image className="w-5 h-5" />
+          <Image className="w-5 h-5 text-base-content/70" />
         </button>
 
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          onChange={handleImageChange}
-          className="hidden"
-        />
-
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 input input-bordered input-sm rounded-full text-sm min-w-0"
-        />
+        <div className="flex-1 rounded-2xl border border-base-300 bg-base-100 px-4 py-2 min-h-[44px] flex items-center">
+          <input
+            type="text"
+            className="w-full bg-transparent outline-none text-sm placeholder:text-base-content/40"
+            placeholder="Type a message..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+        </div>
 
         <button
           type="submit"
           disabled={(!text.trim() && !imagePreview) || isSending}
-          className="btn btn-primary btn-sm btn-circle flex-shrink-0"
-          aria-label="Send message"
+          className="w-11 h-11 shrink-0 rounded-2xl bg-primary text-primary-content flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-5 h-5" />
         </button>
       </form>
     </div>
