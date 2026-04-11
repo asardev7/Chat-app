@@ -24,7 +24,6 @@ const MessageInput = () => {
   const [gifSearch, setGifSearch] = useState("");
   const [gifResults, setGifResults] = useState([]);
   const [gifLoading, setGifLoading] = useState(false);
-  const [gifError, setGifError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [sheetTranslateY, setSheetTranslateY] = useState(0);
   const [draggingSheet, setDraggingSheet] = useState(false);
@@ -35,7 +34,6 @@ const MessageInput = () => {
   const textareaRef = useRef(null);
   const attachWrapRef = useRef(null);
   const gifSheetRef = useRef(null);
-  const gifFetchTimeoutRef = useRef(null);
 
   const { sendMessage, replyTo, clearReplyTo } = useChatStore();
   const { authUser } = useAuthStore();
@@ -90,7 +88,6 @@ const MessageInput = () => {
     setShowAttachMenu(false);
     setShowGifPicker(false);
     setGifSearch("");
-    setGifError("");
     setSheetTranslateY(0);
     setDraggingSheet(false);
     dragStartYRef.current = null;
@@ -119,37 +116,24 @@ const MessageInput = () => {
 
   const fetchGifs = async (query = "") => {
     if (!GIPHY_KEY) {
-      setGifResults([]);
-      setGifError("Missing Giphy API key");
+      toast.error("Missing Giphy API key");
       return;
     }
 
     setGifLoading(true);
-    setGifError("");
 
     try {
       const endpoint = query.trim()
         ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(
             query
-          )}&limit=18&offset=0&rating=g&lang=en`
+          )}&limit=18&rating=g`
         : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=18&rating=g`;
 
       const res = await fetch(endpoint);
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch GIFs");
-      }
-
       const data = await res.json();
-
-      if (data.meta?.status !== 200) {
-        throw new Error(data.meta?.msg || "Giphy request failed");
-      }
-
-      setGifResults(Array.isArray(data.data) ? data.data : []);
+      setGifResults(data.data || []);
     } catch (error) {
-      setGifResults([]);
-      setGifError(error.message || "Failed to load GIFs");
+      toast.error("Failed to load GIFs");
     } finally {
       setGifLoading(false);
     }
@@ -163,19 +147,11 @@ const MessageInput = () => {
   useEffect(() => {
     if (!showGifPicker) return;
 
-    if (gifFetchTimeoutRef.current) {
-      clearTimeout(gifFetchTimeoutRef.current);
-    }
-
-    gifFetchTimeoutRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       fetchGifs(gifSearch);
     }, 350);
 
-    return () => {
-      if (gifFetchTimeoutRef.current) {
-        clearTimeout(gifFetchTimeoutRef.current);
-      }
-    };
+    return () => clearTimeout(timer);
   }, [gifSearch, showGifPicker]);
 
   const handleImageChange = (e) => {
@@ -207,29 +183,22 @@ const MessageInput = () => {
   const handleSelectGif = (gif) => {
     const url =
       gif?.images?.fixed_height?.url ||
-      gif?.images?.downsized_medium?.url ||
       gif?.images?.original?.url ||
       gif?.images?.preview_gif?.url;
 
-    if (!url) {
-      toast.error("Unable to select this GIF");
-      return;
-    }
+    if (!url) return;
 
     setGifPreview(url);
     setImagePreview(null);
     setShowGifPicker(false);
     setShowAttachMenu(false);
     setGifSearch("");
-    setGifError("");
     setSheetTranslateY(0);
   };
 
   const openGifPicker = () => {
     setShowAttachMenu(false);
     setShowGifPicker(true);
-    setGifSearch("");
-    setGifError("");
     setSheetTranslateY(0);
   };
 
@@ -276,6 +245,7 @@ const MessageInput = () => {
   const handleSheetTouchMove = (e) => {
     if (!isMobile || dragStartYRef.current === null) return;
     const deltaY = e.touches[0].clientY - dragStartYRef.current;
+
     if (deltaY > 0) {
       setSheetTranslateY(deltaY);
     }
@@ -306,18 +276,15 @@ const MessageInput = () => {
 
   return (
     <div
-      className="relative shrink-0 border-t border-base-300 bg-base-100 px-2.5 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3"
+      className="relative z-10 shrink-0 border-t border-base-300 bg-base-100 px-2.5 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3"
       style={{
         transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : "translateY(0)",
         transition: "transform 180ms ease",
       }}
     >
-      {showGifPicker && (
+      {showGifPicker && isMobile && (
         <>
-          <div
-            className={`absolute inset-0 z-30 bg-black/20 ${isMobile ? "fixed" : "absolute"}`}
-            onClick={closeAllPopups}
-          />
+          <div className="fixed inset-0 z-30 bg-black/20" onClick={closeAllPopups} />
 
           <div
             ref={gifSheetRef}
@@ -325,18 +292,14 @@ const MessageInput = () => {
             onTouchMove={handleSheetTouchMove}
             onTouchEnd={handleSheetTouchEnd}
             onTouchCancel={handleSheetTouchEnd}
-            className={`z-40 overflow-hidden border border-base-300 bg-base-100 shadow-2xl ${
-              isMobile
-                ? "fixed inset-x-0 bottom-0 mx-auto h-[68vh] rounded-t-[28px]"
-                : "absolute bottom-full left-0 mb-2 w-[min(92vw,24rem)] rounded-3xl"
-            } ${draggingSheet ? "transition-none" : "transition-transform duration-250 ease-out"}`}
-            style={isMobile ? { transform: `translateY(${sheetTranslateY}px)` } : undefined}
+            className={`fixed inset-x-0 bottom-0 z-40 mx-auto h-[68vh] overflow-hidden rounded-t-[28px] border border-base-300 bg-base-100 shadow-2xl ${
+              draggingSheet ? "transition-none" : "transition-transform duration-250 ease-out"
+            }`}
+            style={{ transform: `translateY(${sheetTranslateY}px)` }}
           >
-            {isMobile && (
-              <div className="flex justify-center pt-2.5">
-                <div className="h-1.5 w-12 rounded-full bg-base-300" />
-              </div>
-            )}
+            <div className="flex justify-center pt-2.5">
+              <div className="h-1.5 w-12 rounded-full bg-base-300" />
+            </div>
 
             <div className="flex items-center gap-2 border-b border-base-300 px-3 py-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -379,15 +342,6 @@ const MessageInput = () => {
                     <div key={i} className="h-28 animate-pulse rounded-2xl bg-base-300/60" />
                   ))}
                 </div>
-              ) : gifError ? (
-                <div className="flex h-full items-center justify-center px-4 text-center">
-                  <div>
-                    <p className="text-sm font-semibold text-base-content/75">{gifError}</p>
-                    <p className="mt-1 text-xs text-base-content/50">
-                      Check your Giphy API key and try again
-                    </p>
-                  </div>
-                </div>
               ) : gifResults.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2">
                   {gifResults.map((gif) => {
@@ -424,6 +378,89 @@ const MessageInput = () => {
             </div>
           </div>
         </>
+      )}
+
+      {showGifPicker && !isMobile && (
+        <div
+          ref={gifSheetRef}
+          className="absolute bottom-full left-0 z-20 mb-2 w-[24rem] overflow-hidden rounded-3xl border border-base-300 bg-base-100 shadow-2xl"
+        >
+          <div className="flex items-center gap-2 border-b border-base-300 px-3 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Gift className="h-4.5 w-4.5" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-base-content">GIFs</p>
+              <p className="text-[11px] text-base-content/50">
+                {gifSearch.trim() ? "Search results" : "Trending right now"}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeAllPopups}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-base-content/60 transition-colors hover:bg-base-200"
+            >
+              <X className="h-4.5 w-4.5" />
+            </button>
+          </div>
+
+          <div className="border-b border-base-300 px-3 py-2.5">
+            <div className="flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-3">
+              <Search className="h-4 w-4 text-base-content/45" />
+              <input
+                type="text"
+                value={gifSearch}
+                onChange={(e) => setGifSearch(e.target.value)}
+                placeholder="Search GIFs"
+                className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-base-content/35"
+              />
+            </div>
+          </div>
+
+          <div className="h-80 overflow-y-auto p-2.5">
+            {gifLoading ? (
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-28 animate-pulse rounded-2xl bg-base-300/60" />
+                ))}
+              </div>
+            ) : gifResults.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {gifResults.map((gif) => {
+                  const thumb =
+                    gif?.images?.fixed_height_small?.url ||
+                    gif?.images?.fixed_height?.url ||
+                    gif?.images?.preview_gif?.url;
+
+                  return (
+                    <button
+                      key={gif.id}
+                      type="button"
+                      onClick={() => handleSelectGif(gif)}
+                      className="group overflow-hidden rounded-2xl border border-base-300 bg-base-200/30 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                    >
+                      <img
+                        src={thumb}
+                        alt={gif.title || "GIF"}
+                        className="h-28 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center px-4 text-center">
+                <div>
+                  <p className="text-sm font-semibold text-base-content/70">No GIFs found</p>
+                  <p className="mt-1 text-xs text-base-content/50">Try another keyword</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {replyTo && (
@@ -532,7 +569,7 @@ const MessageInput = () => {
           </button>
 
           {showAttachMenu && !showGifPicker && (
-            <div className="absolute bottom-full left-0 mb-2 w-44 rounded-3xl border border-base-300 bg-base-100 p-2 shadow-xl">
+            <div className="absolute bottom-full left-0 z-20 mb-2 w-44 rounded-3xl border border-base-300 bg-base-100 p-2 shadow-xl">
               <button
                 type="button"
                 onClick={() => {
