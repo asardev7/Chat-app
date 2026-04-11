@@ -152,6 +152,14 @@ const ChatContainer = () => {
   const highlightTimeouts = useRef({});
   const [activeHighlightId, setActiveHighlightId] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -305,6 +313,13 @@ const ChatContainer = () => {
                   ? "You"
                   : message.replyTo?.senderName;
 
+              const canEdit =
+                isMine &&
+                !message.deletedForEveryone &&
+                !message.image &&
+                !message.gifUrl &&
+                !message.isEdited;
+
               const bubbleBlock = (
                 <div
                   className={`group relative flex w-full items-end gap-2 ${
@@ -332,9 +347,56 @@ const ChatContainer = () => {
                       isMine ? "items-end" : "items-start"
                     }`}
                   >
+                    {isDesktop && !message.deletedForEveryone && (
+                      <div
+                        className={`absolute top-1 z-20 flex items-center gap-1 rounded-full border border-base-300 bg-base-100/95 px-1.5 py-1 shadow-md backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:pointer-events-auto ${
+                          isMine ? "-left-28" : "-right-28"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleReply(message, isMine)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 hover:bg-base-200 hover:text-primary"
+                          title="Reply"
+                        >
+                          <CornerUpLeft className="h-4 w-4" />
+                        </button>
+
+                        {isMine && canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActionMessage(message);
+                              setEditingMessage({
+                                _id: message._id,
+                                text: message.text || "",
+                              });
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 hover:bg-base-200 hover:text-primary"
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        {isMine && (
+                          <button
+                            type="button"
+                            onClick={() => openActions(message, isMine)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 hover:bg-red-50 hover:text-red-500"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => openActions(message, isMine)}
+                      onClick={() => {
+                        if (!isDesktop) openActions(message, isMine);
+                      }}
                       className="text-left"
                     >
                       <div
