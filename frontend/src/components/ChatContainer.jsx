@@ -257,28 +257,20 @@ const ChatContainer = () => {
   if (isMessagesLoading) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
-        <div className="shrink-0 border-b border-base-300 bg-base-100/90 backdrop-blur">
-          <ChatHeader />
-        </div>
-
+        <ChatHeader />
         <div className="min-h-0 flex-1 overflow-y-auto">
           <MessageSkeleton />
         </div>
-
-        <div className="shrink-0 border-t border-base-300 bg-base-100">
-          <MessageInput />
-        </div>
+        <MessageInput />
       </div>
     );
   }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
-      <div className="shrink-0 border-b border-base-300 bg-base-100/90 backdrop-blur">
-        <ChatHeader />
-      </div>
+      <ChatHeader />
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2 sm:px-4 sm:py-3 md:px-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:px-3 md:px-4">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div>
@@ -366,7 +358,6 @@ const ChatContainer = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              setActionMessage(message);
                               setEditingMessage({
                                 _id: message._id,
                                 text: message.text || "",
@@ -403,7 +394,7 @@ const ChatContainer = () => {
                         ref={(el) => {
                           if (el) messageRefs.current[message._id] = el;
                         }}
-                        className={`max-w-[80vw] sm:max-w-[68vw] md:max-w-[34rem] lg:max-w-[40rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-300 ${
+                        className={`max-w-[78vw] sm:max-w-[65vw] md:max-w-[34rem] lg:max-w-[40rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-300 ${
                           activeHighlightId === message._id
                             ? "ring-primary/70 shadow-md scale-[1.01]"
                             : "ring-transparent"
@@ -525,9 +516,7 @@ const ChatContainer = () => {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-base-300 bg-base-100">
-        <MessageInput />
-      </div>
+      <MessageInput />
 
       {actionMessage && (
         <>
