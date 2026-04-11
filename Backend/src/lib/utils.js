@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import axios from "axios";
 
 export const generateToken = (userid, res) => {
@@ -17,21 +16,17 @@ export const generateToken = (userid, res) => {
 };
 
 export const sendOTPEmail = async (email, otp) => {
-  const transporter = nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    auth: {
-      user: process.env.BREVO_EMAIL,
-      pass: process.env.BREVO_SMTP_KEY,
-    },
-  });
-
   try {
-    const info = await transporter.sendMail({
-      from: `"Ri-Chat" <${process.env.BREVO_SENDER_EMAIL}>`,
-      to: email,
-      subject: "Your Ri-Chat Verification Code",
-      html: `
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: "Ri-Chat",
+          email: process.env.BREVO_SENDER_EMAIL,
+        },
+        to: [{ email }],
+        subject: "Your Ri-Chat Verification Code",
+        htmlContent: `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -78,17 +73,23 @@ export const sendOTPEmail = async (email, otp) => {
   </table>
 </body>
 </html>
-      `,
-    });
-    console.log("OTP email sent:", info.messageId);
+        `,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log("OTP email sent:", response.data.messageId);
   } catch (err) {
-    console.error("OTP email failed:", err.message);
+    console.error("OTP email failed:", err.response?.data || err.message);
   }
 };
 
 export const triggerBrevo = async (email, fullName) => {
   try {
-    // Sync contact to Brevo list
     await axios.post(
       "https://api.brevo.com/v3/contacts",
       {
@@ -101,7 +102,6 @@ export const triggerBrevo = async (email, fullName) => {
     );
     console.log("Brevo contact synced");
 
-    // Send Brevo welcome template directly via API
     await axios.post(
       "https://api.brevo.com/v3/smtp/email",
       {
