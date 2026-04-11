@@ -7,6 +7,8 @@ const Navbar = () => {
   const { authUser, logout } = useAuthStore();
   const { selectedUser } = useChatStore();
 
+  if (selectedUser) return null;
+
   return (
     <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-40 h-16">
       <div className="max-w-screen-xl mx-auto px-4 h-full flex items-center justify-between">
@@ -15,13 +17,11 @@ const Navbar = () => {
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <MessageSquare className="w-5 h-5 text-primary" />
           </div>
-          <h1 className={`font-bold text-lg ${selectedUser ? "hidden md:block" : "block"}`}>
-            Ri-Chat
-          </h1>
+          <h1 className="font-bold text-lg">Ri-Chat</h1>
         </Link>
 
         {authUser && (
-          <div className={`flex items-center gap-1 ${selectedUser ? "hidden md:flex" : "flex"}`}>
+          <div className="flex items-center gap-1">
             <Link to="/settings" className="btn btn-ghost btn-sm gap-1.5">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">Settings</span>
