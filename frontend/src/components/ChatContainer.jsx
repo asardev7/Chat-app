@@ -5,9 +5,10 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
+import { Check, CheckCheck } from "lucide-react";
 
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, selectedUser } = useChatStore();
+  const { messages, getMessages, isMessagesLoading, selectedUser, markMessagesAsSeen } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
 
@@ -18,6 +19,12 @@ const ChatContainer = () => {
     subscribeToMessages();
     return () => unsubscribeFromMessages();
   }, [selectedUser, getMessages]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      markMessagesAsSeen(selectedUser._id);
+    }
+  }, [selectedUser, messages]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
@@ -47,13 +54,16 @@ const ChatContainer = () => {
         )}
 
         {messages.map((message) => {
-          const isMine = message.senderId === authUser._id;
+    
+          const isMine =
+            (message.senderid?._id || message.senderid)?.toString() === authUser._id?.toString();
+
           return (
             <div
               key={message._id}
               className={`chat ${isMine ? "chat-end" : "chat-start"}`}
             >
-              
+
               <div className="chat-image avatar">
                 <div className="w-9 rounded-full border border-base-300">
                   <img
@@ -87,13 +97,22 @@ const ChatContainer = () => {
                   <p className="text-sm leading-relaxed break-words">{message.text}</p>
                 )}
               </div>
+
+              {isMine && (
+                <div className="chat-footer opacity-70 mt-0.5">
+                  {message.seen ? (
+                    <CheckCheck className="w-3.5 h-3.5 text-blue-400 inline" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5 text-zinc-400 inline" />
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
 
         <div ref={messageEndRef} />
       </div>
-
       <MessageInput />
     </div>
   );
