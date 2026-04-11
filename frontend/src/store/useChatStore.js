@@ -9,6 +9,7 @@ export const useChatStore = create((set, get) => ({
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
+  replyTo: null,
 
   getUsers: async () => {
     set({ isUsersLoading: true });
@@ -29,21 +30,34 @@ export const useChatStore = create((set, get) => ({
       set({ messages: res.data });
       await axiosInstance.put(`/messages/seen/${userId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error");
+      toast.error(error.response?.data?.message || "Error loading messages");
     } finally {
       set({ isMessagesLoading: false });
     }
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
+    const { selectedUser, messages, replyTo } = get();
     try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: [...messages, res.data] });
+      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
+        ...messageData,
+        replyTo: replyTo
+          ? {
+              messageId: replyTo._id,
+              text: replyTo.text || null,
+              image: replyTo.image || null,
+              senderName: replyTo.senderName || "Unknown",
+            }
+          : null,
+      });
+      set({ messages: [...messages, res.data], replyTo: null });
     } catch (error) {
       toast.error(error.response.data.message);
     }
   },
+
+  setReplyTo: (message) => set({ replyTo: message }),
+  clearReplyTo: () => set({ replyTo: null }),
 
   markMessagesAsSeen: async (userId) => {
     try {
