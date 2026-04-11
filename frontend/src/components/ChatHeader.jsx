@@ -1,15 +1,15 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
+
   const isOnline = onlineUsers.includes(selectedUser._id);
 
   return (
-    <div className="px-3 py-3 border-b border-base-300 bg-base-100 flex items-center gap-3">
-
+    <div className="px-3 py-3 md:px-4 border-b border-base-300 bg-base-100 flex items-center gap-3">
       <button
         onClick={() => setSelectedUser(null)}
         className="md:hidden btn btn-ghost btn-sm btn-circle"
@@ -30,18 +30,20 @@ const ChatHeader = () => {
       </div>
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm truncate">{selectedUser.fullName}</h3>
-        <p className={`text-xs ${isOnline ? "text-green-500" : "text-zinc-500"}`}>
+        <h3 className="font-semibold text-sm md:text-[15px] truncate">
+          {selectedUser.fullName}
+        </h3>
+        <p className={`text-xs mt-0.5 ${isOnline ? "text-green-500" : "text-zinc-500"}`}>
           {isOnline ? "Online" : "Offline"}
         </p>
       </div>
 
       <button
         onClick={() => setSelectedUser(null)}
-        className="hidden md:flex btn btn-ghost btn-sm btn-circle"
+        className="hidden md:flex items-center justify-center w-9 h-9 rounded-full hover:bg-base-200 transition-colors"
         aria-label="Close chat"
       >
-        ✕
+        <X className="w-4 h-4" />
       </button>
     </div>
   );
