@@ -16,11 +16,8 @@ const MessageInput = () => {
       toast.error("Please select an image file");
       return;
     }
-
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
+    reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
   };
 
@@ -33,14 +30,9 @@ const MessageInput = () => {
     e.preventDefault();
     if (!text.trim() && !imagePreview) return;
     if (isSending) return;
-
     setIsSending(true);
     try {
-      await sendMessage({
-        text: text.trim(),
-        image: imagePreview,
-      });
-
+      await sendMessage({ text: text.trim(), image: imagePreview });
       setText("");
       setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -52,62 +44,64 @@ const MessageInput = () => {
   };
 
   return (
-    <div className="p-4 w-full">
+    <div className="px-3 py-3 border-t border-base-300 bg-base-100">
+
       {imagePreview && (
-        <div className="mb-3 flex items-center gap-2">
-          <div className="relative">
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="w-20 h-20 object-cover rounded-lg border border-zinc-700"
-            />
-            <button
-              onClick={removeImage}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-base-300
-              flex items-center justify-center"
-              type="button"
-            >
-              <X className="size-3" />
-            </button>
-          </div>
+        <div className="mb-2 relative w-fit">
+          <img
+            src={imagePreview}
+            alt="preview"
+            className="h-20 w-20 object-cover rounded-lg border border-base-300"
+          />
+          <button
+            onClick={removeImage}
+            className="absolute -top-1.5 -right-1.5 btn btn-xs btn-circle btn-error"
+            type="button"
+          >
+            <X className="w-3 h-3" />
+          </button>
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2">
-          <input
-            type="text"
-            className="w-full input input-bordered rounded-lg input-sm sm:input-md"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-          />
 
-          <button
-            type="button"
-            className={`hidden sm:flex btn btn-circle
-                     ${imagePreview ? "text-emerald-500" : "text-zinc-400"}`}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Image size={20} />
-          </button>
-        </div>
+      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="btn btn-ghost btn-sm btn-circle flex-shrink-0 text-zinc-400 hover:text-primary"
+          aria-label="Attach image"
+        >
+          <Image className="w-5 h-5" />
+        </button>
+
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handleImageChange}
+          className="hidden"
+        />
+
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1 input input-bordered input-sm rounded-full text-sm min-w-0"
+        />
+
         <button
           type="submit"
-          className="btn btn-sm btn-circle"
           disabled={(!text.trim() && !imagePreview) || isSending}
+          className="btn btn-primary btn-sm btn-circle flex-shrink-0"
+          aria-label="Send message"
         >
-          <Send size={22} />
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>
   );
 };
+
 export default MessageInput;
