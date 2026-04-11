@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, Send, X, CornerUpLeft, Gift, Search } from "lucide-react";
+import {
+  Image,
+  Send,
+  X,
+  CornerUpLeft,
+  Gift,
+  Plus,
+  Search,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY;
@@ -11,17 +19,66 @@ const MessageInput = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [gifPreview, setGifPreview] = useState(null);
   const [isSending, setIsSending] = useState(false);
+
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [gifSearch, setGifSearch] = useState("");
   const [gifResults, setGifResults] = useState([]);
   const [gifLoading, setGifLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  const [sheetTranslateY, setSheetTranslateY] = useState(0);
+  const [draggingSheet, setDraggingSheet] = useState(false);
+
+  const dragStartYRef = useRef(null);
 
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
-  const gifPanelRef = useRef(null);
+  const attachWrapRef = useRef(null);
+  const gifSheetRef = useRef(null);
 
   const { sendMessage, replyTo, clearReplyTo } = useChatStore();
   const { authUser } = useAuthStore();
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const closeAllPopups = () => {
+    setShowAttachMenu(false);
+    setShowGifPicker(false);
+    setGifSearch("");
+    setSheetTranslateY(0);
+    setDraggingSheet(false);
+    dragStartYRef.current = null;
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        attachWrapRef.current &&
+        !attachWrapRef.current.contains(e.target) &&
+        gifSheetRef.current &&
+        !gifSheetRef.current.contains(e.target)
+      ) {
+        closeAllPopups();
+      }
+
+      if (
+        attachWrapRef.current &&
+        !attachWrapRef.current.contains(e.target) &&
+        !showGifPicker
+      ) {
+        setShowAttachMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showGifPicker]);
 
   const fetchGifs = async (query = "") => {
     if (!GIPHY_KEY) {
@@ -62,19 +119,6 @@ const MessageInput = () => {
     return () => clearTimeout(timer);
   }, [gifSearch, showGifPicker]);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (gifPanelRef.current && !gifPanelRef.current.contains(e.target)) {
-        setShowGifPicker(false);
-      }
-    };
-
-    if (showGifPicker) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showGifPicker]);
-
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -109,7 +153,15 @@ const MessageInput = () => {
     setGifPreview(url);
     setImagePreview(null);
     setShowGifPicker(false);
+    setShowAttachMenu(false);
     setGifSearch("");
+    setSheetTranslateY(0);
+  };
+
+  const openGifPicker = () => {
+    setShowAttachMenu(false);
+    setShowGifPicker(true);
+    setSheetTranslateY(0);
   };
 
   const handleSendMessage = async (e) => {
@@ -138,42 +190,114 @@ const MessageInput = () => {
     }
   };
 
+  const handleSheetTouchStart = (e) => {
+    if (!isMobile) return;
+    dragStartYRef.current = e.touches[0].clientY;
+    setDraggingSheet(true);
+  };
+
+  const handleSheetTouchMove = (e) => {
+    if (!isMobile || dragStartYRef.current === null) return;
+
+    const deltaY = e.touches[0].clientY - dragStartYRef.current;
+
+    if (deltaY > 0) {
+      setSheetTranslateY(deltaY);
+    }
+  };
+
+  const handleSheetTouchEnd = () => {
+    if (!isMobile) return;
+
+    if (sheetTranslateY > 110) {
+      closeAllPopups();
+    } else {
+      setSheetTranslateY(0);
+    }
+
+    setDraggingSheet(false);
+    dragStartYRef.current = null;
+  };
+
   const isMyReply = replyTo?.senderName === authUser?.fullName;
 
   return (
     <div className="relative border-t border-base-300 bg-base-100 px-2.5 py-2 sm:px-4 sm:py-3">
-      <div ref={gifPanelRef} className="relative">
-        {showGifPicker && (
-          <div className="absolute bottom-full left-0 mb-2 w-[min(92vw,22rem)] overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-xl">
-            <div className="flex items-center gap-2 border-b border-base-300 px-3 py-2">
-              <Search className="h-4 w-4 text-base-content/50" />
-              <input
-                type="text"
-                value={gifSearch}
-                onChange={(e) => setGifSearch(e.target.value)}
-                placeholder="Search GIFs"
-                className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-base-content/40"
-              />
+      {showGifPicker && (
+        <>
+          <div
+            className={`absolute inset-0 z-30 bg-black/20 ${
+              isMobile ? "fixed" : "absolute"
+            }`}
+            onClick={() => closeAllPopups()}
+          />
+
+          <div
+            ref={gifSheetRef}
+            onTouchStart={handleSheetTouchStart}
+            onTouchMove={handleSheetTouchMove}
+            onTouchEnd={handleSheetTouchEnd}
+            onTouchCancel={handleSheetTouchEnd}
+            className={`z-40 overflow-hidden border border-base-300 bg-base-100 shadow-2xl ${
+              isMobile
+                ? "fixed inset-x-0 bottom-0 mx-auto h-[68vh] rounded-t-[28px]"
+                : "absolute bottom-full left-0 mb-2 w-[min(92vw,24rem)] rounded-3xl"
+            } ${draggingSheet ? "transition-none" : "transition-transform duration-250 ease-out"}`}
+            style={
+              isMobile ? { transform: `translateY(${sheetTranslateY}px)` } : undefined
+            }
+          >
+            {isMobile && (
+              <div className="flex justify-center pt-2.5">
+                <div className="h-1.5 w-12 rounded-full bg-base-300" />
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 border-b border-base-300 px-3 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Gift className="h-4.5 w-4.5" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-base-content">GIFs</p>
+                <p className="text-[11px] text-base-content/50">
+                  {gifSearch.trim() ? "Search results" : "Trending right now"}
+                </p>
+              </div>
+
               <button
                 type="button"
-                onClick={() => {
-                  setShowGifPicker(false);
-                  setGifSearch("");
-                }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/60 hover:bg-base-200"
+                onClick={() => closeAllPopups()}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-base-content/60 transition-colors hover:bg-base-200"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4.5 w-4.5" />
               </button>
             </div>
 
-            <div className="max-h-80 overflow-y-auto p-2">
+            <div className="border-b border-base-300 px-3 py-2.5">
+              <div className="flex items-center gap-2 rounded-2xl border border-base-300 bg-base-100 px-3">
+                <Search className="h-4 w-4 text-base-content/45" />
+                <input
+                  type="text"
+                  value={gifSearch}
+                  onChange={(e) => setGifSearch(e.target.value)}
+                  placeholder="Search GIFs"
+                  className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-base-content/35"
+                />
+              </div>
+            </div>
+
+            <div className="h-[calc(100%-8.5rem)] overflow-y-auto p-2.5">
               {gifLoading ? (
                 <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-28 animate-pulse rounded-xl bg-base-300/60" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-28 animate-pulse rounded-2xl bg-base-300/60"
+                    />
                   ))}
                 </div>
-              ) : (
+              ) : gifResults.length > 0 ? (
                 <div className="grid grid-cols-2 gap-2">
                   {gifResults.map((gif) => {
                     const thumb =
@@ -186,7 +310,7 @@ const MessageInput = () => {
                         key={gif.id}
                         type="button"
                         onClick={() => handleSelectGif(gif)}
-                        className="overflow-hidden rounded-xl border border-base-300 bg-base-200/40 text-left hover:border-primary/40"
+                        className="group overflow-hidden rounded-2xl border border-base-300 bg-base-200/30 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                       >
                         <img
                           src={thumb}
@@ -198,11 +322,22 @@ const MessageInput = () => {
                     );
                   })}
                 </div>
+              ) : (
+                <div className="flex h-full items-center justify-center px-4 text-center">
+                  <div>
+                    <p className="text-sm font-semibold text-base-content/70">
+                      No GIFs found
+                    </p>
+                    <p className="mt-1 text-xs text-base-content/50">
+                      Try another keyword
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {replyTo && (
         <div className="mb-2 flex items-start gap-2 rounded-2xl border border-base-300 bg-base-200/70 px-2.5 py-2">
@@ -293,21 +428,55 @@ const MessageInput = () => {
           onChange={handleImageChange}
         />
 
-        <button
-          type="button"
-          onClick={() => setShowGifPicker((v) => !v)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base-100 transition-colors hover:bg-base-200 sm:h-11 sm:w-11"
-        >
-          <Gift className="h-4.5 w-4.5 text-base-content/70 sm:h-5 sm:w-5" />
-        </button>
+        <div ref={attachWrapRef} className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setShowAttachMenu((prev) => !prev);
+              if (showGifPicker) setShowGifPicker(false);
+            }}
+            className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-base-300 bg-base-100 transition-all duration-200 hover:bg-base-200 sm:h-11 sm:w-11 ${
+              showAttachMenu ? "rotate-45 text-primary" : "text-base-content/70"
+            }`}
+          >
+            <Plus className="h-5 w-5" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base-100 transition-colors hover:bg-base-200 sm:h-11 sm:w-11"
-        >
-          <Image className="h-4.5 w-4.5 text-base-content/70 sm:h-5 sm:w-5" />
-        </button>
+          {showAttachMenu && !showGifPicker && (
+            <div className="absolute bottom-full left-0 mb-2 w-44 rounded-3xl border border-base-300 bg-base-100 p-2 shadow-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAttachMenu(false);
+                  fileInputRef.current?.click();
+                }}
+                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-base-200 text-base-content/75">
+                  <Image className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-base-content">Photo</p>
+                  <p className="text-[11px] text-base-content/50">Upload image</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={openGifPicker}
+                className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Gift className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-base-content">GIF</p>
+                  <p className="text-[11px] text-base-content/50">Search Giphy</p>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="flex min-h-[42px] flex-1 items-center rounded-2xl border border-base-300 bg-base-100 px-3 sm:min-h-[44px] sm:px-4">
           <input
