@@ -5,9 +5,17 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { Check, CheckCheck, CornerUpLeft } from "lucide-react";
+import {
+  Check,
+  CheckCheck,
+  CornerUpLeft,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 
 const SWIPE_THRESHOLD = 60;
+const LONG_PRESS_MS = 450;
 
 const linkifyText = (text) => {
   if (!text) return null;
@@ -39,27 +47,48 @@ const linkifyText = (text) => {
   });
 };
 
-const SwipeableMessage = ({ children, onSwipe, disabled }) => {
+const SwipeableMessage = ({ children, onSwipe, onLongPress, disabled }) => {
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
+  const longPressTimeout = useRef(null);
+
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const [triggered, setTriggered] = useState(false);
+  const [longPressed, setLongPressed] = useState(false);
+
+  const clearLongPress = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+  };
 
   const reset = () => {
     setSwipeX(0);
     setSwiping(false);
     setTriggered(false);
+    setLongPressed(false);
     touchStartX.current = null;
     touchStartY.current = null;
+    clearLongPress();
   };
 
   const handleTouchStart = (e) => {
     if (disabled) return;
+
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setSwiping(true);
     setTriggered(false);
+    setLongPressed(false);
+
+    clearLongPress();
+    longPressTimeout.current = setTimeout(() => {
+      setLongPressed(true);
+      if (navigator.vibrate) navigator.vibrate(30);
+      onLongPress?.();
+    }, LONG_PRESS_MS);
   };
 
   const handleTouchMove = (e) => {
@@ -68,7 +97,11 @@ const SwipeableMessage = ({ children, onSwipe, disabled }) => {
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
 
-    if (deltaY > 24) {
+    if (deltaY > 12 || Math.abs(deltaX) > 10) {
+      clearLongPress();
+    }
+
+    if (deltaY > 24 || longPressed) {
       setSwipeX(0);
       return;
     }
@@ -86,7 +119,13 @@ const SwipeableMessage = ({ children, onSwipe, disabled }) => {
 
   const handleTouchEnd = () => {
     if (disabled) return;
-    if (triggered) onSwipe();
+
+    clearLongPress();
+
+    if (!longPressed && triggered) {
+      onSwipe?.();
+    }
+
     reset();
   };
 
@@ -105,7 +144,7 @@ const SwipeableMessage = ({ children, onSwipe, disabled }) => {
         {children}
       </div>
 
-      {!disabled && swipeX > 10 && (
+      {!disabled && swipeX > 10 && !longPressed && (
         <div
           className="pointer-events-none absolute left-0 top-1/2 flex -translate-y-1/2 items-center justify-center"
           style={{ opacity: Math.min(swipeX / SWIPE_THRESHOLD, 1) }}
@@ -134,6 +173,8 @@ const ChatContainer = () => {
     subscribeToMessages,
     unsubscribeFromMessages,
     setReplyTo,
+    setEditingMessage,
+    deleteMessage,
   } = useChatStore();
 
   const { authUser } = useAuthStore();
@@ -143,6 +184,7 @@ const ChatContainer = () => {
   const highlightTimeouts = useRef({});
   const [isDesktop, setIsDesktop] = useState(false);
   const [activeHighlightId, setActiveHighlightId] = useState(null);
+  const [actionMessage, setActionMessage] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 768);
@@ -153,14 +195,19 @@ const ChatContainer = () => {
 
   useEffect(() => {
     if (!selectedUser) return;
+
     getMessages(selectedUser._id);
     subscribeToMessages();
+
     return () => unsubscribeFromMessages();
   }, [selectedUser]);
 
   useEffect(() => {
     if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+      messageEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
     }
   }, [messages]);
 
@@ -177,6 +224,8 @@ const ChatContainer = () => {
   }, [messages]);
 
   const handleReply = (message, isMine) => {
+    if (message.deletedForEveryone) return;
+
     setReplyTo({
       _id: message._id,
       text: message.text || null,
@@ -191,7 +240,11 @@ const ChatContainer = () => {
     const el = messageRefs.current[messageId];
     if (!el) return;
 
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
     setActiveHighlightId(messageId);
 
     if (highlightTimeouts.current[messageId]) {
@@ -203,15 +256,47 @@ const ChatContainer = () => {
     }, 1600);
   };
 
+  const openActions = (message, isMine) => {
+    if (!isMine || message.deletedForEveryone) return;
+    setActionMessage(message);
+  };
+
+  const closeActions = () => setActionMessage(null);
+
+  const handleEdit = () => {
+    if (!actionMessage) return;
+
+    if (actionMessage.image || actionMessage.gifUrl) {
+      closeActions();
+      return;
+    }
+
+    setEditingMessage({
+      _id: actionMessage._id,
+      text: actionMessage.text || "",
+    });
+
+    closeActions();
+  };
+
+  const handleDelete = async () => {
+    if (!actionMessage) return;
+    const messageId = actionMessage._id;
+    closeActions();
+    await deleteMessage(messageId);
+  };
+
   if (isMessagesLoading) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
         <div className="shrink-0">
           <ChatHeader />
         </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto">
           <MessageSkeleton />
         </div>
+
         <div className="shrink-0">
           <MessageInput />
         </div>
@@ -258,6 +343,8 @@ const ChatContainer = () => {
                   ? "You"
                   : message.replyTo?.senderName;
 
+              const canEdit = isMine && !message.deletedForEveryone && !message.image && !message.gifUrl;
+
               const bubbleBlock = (
                 <div
                   className={`group relative flex w-full items-end gap-1.5 ${
@@ -285,17 +372,17 @@ const ChatContainer = () => {
                       isMine ? "items-end" : "items-start"
                     }`}
                   >
-                    {isDesktop && (
+                    {isDesktop && isMine && !message.deletedForEveryone && (
                       <button
                         type="button"
-                        onClick={() => handleReply(message, isMine)}
-                        className={`absolute top-1 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-base-100/95 text-base-content/60 shadow-sm ring-1 ring-base-300 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:text-primary ${
+                        onClick={() => openActions(message, isMine)}
+                        className={`absolute top-1 z-20 flex h-8 min-w-[3.5rem] items-center justify-center rounded-full bg-base-100/95 px-3 text-[11px] font-medium text-base-content/70 shadow-sm ring-1 ring-base-300 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:text-primary ${
                           isMine
-                            ? "-left-11 opacity-0 group-hover:opacity-100"
-                            : "-right-11 opacity-0 group-hover:opacity-100"
+                            ? "-left-16 opacity-0 group-hover:opacity-100"
+                            : "-right-16 opacity-0 group-hover:opacity-100"
                         }`}
                       >
-                        <CornerUpLeft className="h-4 w-4" />
+                        Edit
                       </button>
                     )}
 
@@ -311,9 +398,9 @@ const ChatContainer = () => {
                         isMine
                           ? "rounded-br-md bg-primary text-primary-content"
                           : "rounded-bl-md border border-base-300/50 bg-base-100 text-base-content"
-                      }`}
+                      } ${message.deletedForEveryone ? "opacity-80" : ""}`}
                     >
-                      {hasReply && (
+                      {hasReply && !message.deletedForEveryone && (
                         <button
                           type="button"
                           disabled={!originalMessage}
@@ -339,24 +426,20 @@ const ChatContainer = () => {
                             </div>
                           )}
 
-                          {message.replyTo.gifUrl &&
-                            !message.replyTo.text &&
-                            !message.replyTo.image && (
-                              <div className="flex items-center gap-1.5">
-                                <img
-                                  src={message.replyTo.gifUrl}
-                                  alt="reply gif"
-                                  className="h-7 w-7 rounded-md object-cover"
-                                />
-                                <span className="truncate">GIF</span>
-                              </div>
-                            )}
+                          {message.replyTo.gifUrl && !message.replyTo.text && !message.replyTo.image && (
+                            <div className="flex items-center gap-1.5">
+                              <img
+                                src={message.replyTo.gifUrl}
+                                alt="reply gif"
+                                className="h-7 w-7 rounded-md object-cover"
+                              />
+                              <span className="truncate">GIF</span>
+                            </div>
+                          )}
 
-                          {message.replyTo.text &&
-                            !message.replyTo.image &&
-                            !message.replyTo.gifUrl && (
-                              <p className="truncate leading-4">{message.replyTo.text}</p>
-                            )}
+                          {message.replyTo.text && !message.replyTo.image && !message.replyTo.gifUrl && (
+                            <p className="truncate leading-4">{message.replyTo.text}</p>
+                          )}
 
                           {message.replyTo.image && message.replyTo.text && (
                             <div className="flex items-center gap-1.5">
@@ -371,7 +454,7 @@ const ChatContainer = () => {
                         </button>
                       )}
 
-                      {message.gifUrl && (
+                      {!message.deletedForEveryone && message.gifUrl && (
                         <img
                           src={message.gifUrl}
                           alt="gif"
@@ -381,7 +464,7 @@ const ChatContainer = () => {
                         />
                       )}
 
-                      {message.image && (
+                      {!message.deletedForEveryone && message.image && (
                         <img
                           src={message.image}
                           alt="attachment"
@@ -391,17 +474,17 @@ const ChatContainer = () => {
                         />
                       )}
 
-                      {message.text && (
-                        <div
-                          className={
-                            message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"
-                          }
-                        >
+                      {message.deletedForEveryone ? (
+                        <div className="px-2.5 py-2">
+                          <p className="text-[13px] italic opacity-75">This message was deleted</p>
+                        </div>
+                      ) : message.text ? (
+                        <div className={message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
                           <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
                             {linkifyText(message.text)}
                           </p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     <div
@@ -412,6 +495,9 @@ const ChatContainer = () => {
                       }`}
                     >
                       <span>{formatMessageTime(message.createdAt)}</span>
+                      {message.isEdited && !message.deletedForEveryone && (
+                        <span className="italic opacity-80">edited</span>
+                      )}
                       {isMine &&
                         (message.seen ? (
                           <CheckCheck className="h-3.5 w-3.5 text-blue-400" />
@@ -431,10 +517,17 @@ const ChatContainer = () => {
                   }`}
                 >
                   {isDesktop ? (
-                    bubbleBlock
+                    <div onContextMenu={(e) => {
+                      if (!isMine || message.deletedForEveryone) return;
+                      e.preventDefault();
+                      openActions(message, isMine);
+                    }} className="w-full">
+                      {bubbleBlock}
+                    </div>
                   ) : (
                     <SwipeableMessage
                       onSwipe={() => handleReply(message, isMine)}
+                      onLongPress={() => openActions(message, isMine)}
                       disabled={false}
                     >
                       {bubbleBlock}
@@ -443,6 +536,7 @@ const ChatContainer = () => {
                 </div>
               );
             })}
+
             <div ref={messageEndRef} />
           </div>
         )}
@@ -451,6 +545,64 @@ const ChatContainer = () => {
       <div className="shrink-0">
         <MessageInput />
       </div>
+
+      {actionMessage && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={closeActions}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-base-300 bg-base-100 p-3 shadow-2xl sm:left-1/2 sm:right-auto sm:bottom-6 sm:w-[24rem] sm:-translate-x-1/2 sm:rounded-3xl">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-base-300 sm:hidden" />
+
+            <div className="mb-2 px-1">
+              <p className="text-sm font-semibold text-base-content">Message actions</p>
+              <p className="text-[11px] text-base-content/50">
+                Choose what you want to do with this message
+              </p>
+            </div>
+
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <Pencil className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-base-content">Edit</p>
+                  <p className="text-[11px] text-base-content/50">Change your text message</p>
+                </div>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-error/10"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-error/10 text-error">
+                <Trash2 className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-base-content">Delete</p>
+                <p className="text-[11px] text-base-content/50">Remove for everyone</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={closeActions}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-base-300 px-3 py-3 text-sm font-medium text-base-content/75 transition-colors hover:bg-base-200"
+            >
+              <X className="h-4 w-4" />
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
