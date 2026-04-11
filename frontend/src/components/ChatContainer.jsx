@@ -19,7 +19,6 @@ const ChatContainer = () => {
 
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
-  const messageListRef = useRef(null);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -60,10 +59,7 @@ const ChatContainer = () => {
         <ChatHeader />
       </div>
 
-      <div
-        ref={messageListRef}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4"
-      >
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-3">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-center px-6">
             <div>
@@ -76,64 +72,89 @@ const ChatContainer = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-4 pb-2">
-            {messages.map((message) => {
+          <div className="space-y-2.5 sm:space-y-3 pb-2">
+            {messages.map((message, index) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
                 authUser._id?.toString();
 
+              const previousMessage = messages[index - 1];
+              const previousIsSameSender =
+                previousMessage &&
+                (previousMessage.senderid?._id || previousMessage.senderid)?.toString() ===
+                  (message.senderid?._id || message.senderid)?.toString();
+
               return (
                 <div
                   key={message._id}
-                  className={`chat ${isMine ? "chat-end" : "chat-start"}`}
+                  className={`flex ${isMine ? "justify-end" : "justify-start"} ${
+                    previousIsSameSender ? "mt-1" : "mt-3"
+                  }`}
                 >
-                  <div className="chat-image avatar">
-                    <div className="w-9 rounded-full border border-base-300">
-                      <img
-                        src={
-                          isMine
-                            ? authUser.profilePic || "/avatar.png"
-                            : selectedUser.profilePic || "/avatar.png"
-                        }
-                        alt="avatar"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="chat-header mb-1">
-                    <time className="text-xs opacity-50 ml-1">
-                      {formatMessageTime(message.createdAt)}
-                    </time>
-                  </div>
-
                   <div
-                    className={`chat-bubble flex flex-col gap-2 max-w-[82%] sm:max-w-[75%] lg:max-w-[60%] ${
-                      isMine ? "chat-bubble-primary" : ""
+                    className={`flex items-end gap-2 max-w-[88%] sm:max-w-[78%] lg:max-w-[64%] ${
+                      isMine ? "flex-row-reverse" : "flex-row"
                     }`}
                   >
-                    {message.image && (
-                      <img
-                        src={message.image}
-                        alt="attachment"
-                        className="rounded-xl max-w-full max-h-72 object-cover"
-                      />
-                    )}
-                    {message.text && (
-                      <p className="text-sm leading-relaxed break-words">
-                        {message.text}
-                      </p>
-                    )}
-                  </div>
-
-                  {isMine && (
-                    <div className="chat-footer opacity-70 mt-0.5">
-                      {message.seen ? (
-                        <CheckCheck className="w-3.5 h-3.5 text-blue-400 inline" />
+                    <div className="shrink-0 self-end">
+                      {!isMine && !previousIsSameSender ? (
+                        <img
+                          src={selectedUser.profilePic || "/avatar.png"}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full object-cover border border-base-300"
+                        />
+                      ) : isMine && !previousIsSameSender ? (
+                        <img
+                          src={authUser.profilePic || "/avatar.png"}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full object-cover border border-base-300"
+                        />
                       ) : (
-                        <Check className="w-3.5 h-3.5 text-zinc-400 inline" />
+                        <div className="w-8 h-8" />
                       )}
                     </div>
-                  )}
+
+                    <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+                      <div
+                        className={`rounded-2xl px-4 py-2.5 shadow-sm ${
+                          isMine
+                            ? "bg-primary text-primary-content rounded-br-md"
+                            : "bg-base-100 text-base-content rounded-bl-md border border-base-300/40"
+                        }`}
+                      >
+                        {message.image && (
+                          <img
+                            src={message.image}
+                            alt="attachment"
+                            className="rounded-xl mb-2 max-w-full max-h-72 object-cover"
+                          />
+                        )}
+
+                        {message.text && (
+                          <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
+                            {message.text}
+                          </p>
+                        )}
+
+                        <div
+                          className={`mt-1.5 flex items-center gap-1 text-[11px] ${
+                            isMine
+                              ? "justify-end text-primary-content/80"
+                              : "justify-start text-base-content/45"
+                          }`}
+                        >
+                          <span>{formatMessageTime(message.createdAt)}</span>
+
+                          {isMine &&
+                            (message.seen ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                            ) : (
+                              <Check className="w-3.5 h-3.5 opacity-80" />
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
