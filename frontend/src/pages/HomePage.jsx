@@ -8,32 +8,31 @@ const Homepage = () => {
 
   return (
     <div
-      className={`flex overflow-hidden bg-base-200 ${
-        selectedUser
-          ? "h-screen"
-          : "h-[calc(100vh-4rem)] mt-16"
+      className={`bg-base-200 overflow-hidden ${
+        selectedUser ? "h-screen" : "h-[calc(100vh-4rem)] mt-16"
       }`}
     >
-      <div
-        className={`
-          ${selectedUser ? "hidden md:flex" : "flex"}
-          w-full md:w-72 lg:w-80 flex-shrink-0 flex-col
-        `}
-      >
-        <Sidebar />
-      </div>
+      <div className="flex h-full w-full">
+        <div
+          className={`
+            ${selectedUser ? "hidden md:flex" : "flex"}
+            w-full md:w-80 lg:w-88 xl:w-96 flex-shrink-0 min-w-0
+          `}
+        >
+          <Sidebar />
+        </div>
 
-      <div
-        className={`
-          ${!selectedUser ? "hidden md:flex" : "flex"}
-          flex-1 flex-col min-w-0
-        `}
-      >
-        {selectedUser ? <ChatContainer /> : <NoChatSelected />}
+        <div
+          className={`
+            ${!selectedUser ? "hidden md:flex" : "flex"}
+            flex-1 min-w-0
+          `}
+        >
+          {selectedUser ? <ChatContainer /> : <NoChatSelected />}
+        </div>
       </div>
     </div>
   );
 };
-
 
 export default Homepage;
