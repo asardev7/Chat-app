@@ -28,16 +28,15 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
-      await axiosInstance.put(`/messages/seen/${userId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Error loading messages");
+      toast.error(error.response?.data?.message || "Failed to load messages");
     } finally {
       set({ isMessagesLoading: false });
     }
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser, messages, replyTo } = get();
+    const { selectedUser, replyTo } = get();
 
     try {
       const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, {
@@ -52,23 +51,13 @@ export const useChatStore = create((set, get) => ({
           : null,
       });
 
-      set({
-        messages: [...messages, res.data],
+      set((state) => ({
+        messages: [...state.messages, res.data],
         replyTo: null,
-      });
+      }));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to send message");
-    }
-  },
-
-  setReplyTo: (message) => set({ replyTo: message }),
-  clearReplyTo: () => set({ replyTo: null }),
-
-  markMessagesAsSeen: async (userId) => {
-    try {
-      await axiosInstance.put(`/messages/seen/${userId}`);
-    } catch (error) {
-      console.error("Mark seen error:", error.response?.data || error.message);
+      throw error;
     }
   },
 
@@ -76,48 +65,42 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
 
+    socket.off("newMessage");
+
     socket.on("newMessage", (newMessage) => {
       const { selectedUser } = get();
       if (!selectedUser) return;
 
-      const incomingSenderId = (newMessage.senderid?._id || newMessage.senderid)?.toString();
-      if (selectedUser._id?.toString() !== incomingSenderId) return;
+      const senderId = (newMessage.senderid?._id || newMessage.senderid)?.toString();
+      const receiverId = (newMessage.receiverid?._id || newMessage.receiverid)?.toString();
 
-      set((state) => ({
-        messages: [...state.messages, newMessage],
-      }));
+      const selectedId = selectedUser._id?.toString();
+      const authId = useAuthStore.getState().authUser?._id?.toString();
 
-      axiosInstance.put(`/messages/seen/${selectedUser._id}`).catch(() => {});
-    });
+      const isRelevantIncoming =
+        senderId === selectedId && receiverId === authId;
 
-    socket.on("messagesSeen", ({ from }) => {
-      const authUser = useAuthStore.getState().authUser;
+      const isRelevantOutgoing =
+        senderId === authId && receiverId === selectedId;
 
-      set((state) => ({
-        messages: state.messages.map((msg) => {
-          const msgSenderId = (msg.senderid?._id || msg.senderid)?.toString();
-          const msgReceiverId = (msg.receiverid?._id || msg.receiverid)?.toString();
+      if (!isRelevantIncoming && !isRelevantOutgoing) return;
 
-          if (
-            msgSenderId === authUser._id?.toString() &&
-            msgReceiverId === from?.toString()
-          ) {
-            return { ...msg, seen: true };
-          }
-
-          return msg;
-        }),
-      }));
+      set((state) => {
+        const exists = state.messages.some((msg) => msg._id === newMessage._id);
+        if (exists) return state;
+        return { messages: [...state.messages, newMessage] };
+      });
     });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
-
     socket.off("newMessage");
-    socket.off("messagesSeen");
   },
+
+  setReplyTo: (message) => set({ replyTo: message }),
+  clearReplyTo: () => set({ replyTo: null }),
 
   setSelectedUser: (selectedUser) =>
     set({
