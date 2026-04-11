@@ -150,16 +150,8 @@ const ChatContainer = () => {
   const messageEndRef = useRef(null);
   const messageRefs = useRef({});
   const highlightTimeouts = useRef({});
-  const [isDesktop, setIsDesktop] = useState(false);
   const [activeHighlightId, setActiveHighlightId] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
-
-  useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -257,7 +249,7 @@ const ChatContainer = () => {
   if (isMessagesLoading) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
-        <div className="shrink-0">
+        <div className="shrink-0 border-b border-base-300 bg-base-100/90 backdrop-blur">
           <ChatHeader />
         </div>
 
@@ -265,7 +257,7 @@ const ChatContainer = () => {
           <MessageSkeleton />
         </div>
 
-        <div className="shrink-0">
+        <div className="shrink-0 border-t border-base-300 bg-base-100">
           <MessageInput />
         </div>
       </div>
@@ -274,15 +266,17 @@ const ChatContainer = () => {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
-      <div className="shrink-0">
+      <div className="shrink-0 border-b border-base-300 bg-base-100/90 backdrop-blur">
         <ChatHeader />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-3 sm:px-4">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2 sm:px-4 sm:py-3 md:px-5">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div>
-              <p className="text-base font-medium text-base-content/70">No messages yet</p>
+              <p className="text-lg font-semibold text-base-content/75">
+                No messages yet
+              </p>
               <p className="mt-1 text-sm text-base-content/50">
                 Start the conversation with {selectedUser?.fullName?.split(" ")[0]}
               </p>
@@ -311,16 +305,9 @@ const ChatContainer = () => {
                   ? "You"
                   : message.replyTo?.senderName;
 
-              const canEdit =
-                isMine &&
-                !message.deletedForEveryone &&
-                !message.image &&
-                !message.gifUrl &&
-                !message.isEdited;
-
               const bubbleBlock = (
                 <div
-                  className={`group relative flex w-full items-end gap-1.5 ${
+                  className={`group relative flex w-full items-end gap-2 ${
                     isMine ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
@@ -354,7 +341,7 @@ const ChatContainer = () => {
                         ref={(el) => {
                           if (el) messageRefs.current[message._id] = el;
                         }}
-                        className={`max-w-[82vw] sm:max-w-[70vw] md:max-w-[32rem] lg:max-w-[38rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-500 ${
+                        className={`max-w-[80vw] sm:max-w-[68vw] md:max-w-[34rem] lg:max-w-[40rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-300 ${
                           activeHighlightId === message._id
                             ? "ring-primary/70 shadow-md scale-[1.01]"
                             : "ring-transparent"
@@ -394,7 +381,9 @@ const ChatContainer = () => {
 
                         {message.deletedForEveryone ? (
                           <div className="px-2.5 py-2">
-                            <p className="text-[13px] italic opacity-75">This message was deleted</p>
+                            <p className="text-[13px] italic opacity-75">
+                              This message was deleted
+                            </p>
                           </div>
                         ) : (
                           <>
@@ -474,7 +463,7 @@ const ChatContainer = () => {
         )}
       </div>
 
-      <div className="shrink-0">
+      <div className="shrink-0 border-t border-base-300 bg-base-100">
         <MessageInput />
       </div>
 
