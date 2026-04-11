@@ -15,30 +15,27 @@ const Navbar = () => {
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <MessageSquare className="w-5 h-5 text-primary" />
           </div>
- 
           <h1 className={`font-bold text-lg ${selectedUser ? "hidden md:block" : "block"}`}>
             Ri-Chat
           </h1>
         </Link>
 
-        <div className={`flex items-center gap-2 ${selectedUser ? "hidden md:flex" : "flex"}`}>
-          {authUser && (
-            <>
-              <Link to="/settings" className="btn btn-ghost btn-sm gap-1">
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Settings</span>
-              </Link>
-              <Link to="/profile" className="btn btn-ghost btn-sm gap-1">
-                <User className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Profile</span>
-              </Link>
-              <button onClick={logout} className="btn btn-ghost btn-sm gap-1">
-                <LogOutIcon className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Logout</span>
-              </button>
-            </>
-          )}
-        </div>
+        {authUser && (
+          <div className={`flex items-center gap-1 ${selectedUser ? "hidden md:flex" : "flex"}`}>
+            <Link to="/settings" className="btn btn-ghost btn-sm gap-1.5">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Settings</span>
+            </Link>
+            <Link to="/profile" className="btn btn-ghost btn-sm gap-1.5">
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Profile</span>
+            </Link>
+            <button onClick={logout} className="btn btn-ghost btn-sm gap-1.5">
+              <LogOutIcon className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">Logout</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
