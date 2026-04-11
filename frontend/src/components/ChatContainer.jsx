@@ -15,7 +15,7 @@ const linkifyText = (text) => {
 
   return parts.map((part, index) => {
     if (!part) return null;
-    
+
     const isUrl = /^(https?:\/\/|www\.)/i.test(part);
 
     if (isUrl) {
@@ -36,7 +36,7 @@ const linkifyText = (text) => {
     return <span key={index}>{part}</span>;
   });
 };
-  
+
 const ChatContainer = () => {
   const {
     messages,
@@ -102,7 +102,7 @@ const ChatContainer = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-2 sm:space-y-2.5 pb-2">
+          <div className="space-y-1.5 sm:space-y-2 pb-2">
             {messages.map((message, index) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
@@ -118,11 +118,11 @@ const ChatContainer = () => {
                 <div
                   key={message._id}
                   className={`flex ${isMine ? "justify-end" : "justify-start"} ${
-                    previousIsSameSender ? "mt-1" : "mt-3"
+                    previousIsSameSender ? "mt-0.5" : "mt-2.5"
                   }`}
                 >
                   <div
-                    className={`flex items-end gap-2 max-w-[88%] sm:max-w-[78%] lg:max-w-[64%] ${
+                    className={`flex items-end gap-2 max-w-[88%] sm:max-w-[76%] lg:max-w-[62%] ${
                       isMine ? "flex-row-reverse" : "flex-row"
                     }`}
                   >
@@ -146,7 +146,7 @@ const ChatContainer = () => {
 
                     <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
                       <div
-                        className={`rounded-2xl px-4 py-2.5 shadow-sm ${
+                        className={`rounded-2xl shadow-sm ${
                           isMine
                             ? "bg-primary text-primary-content rounded-br-md"
                             : "bg-base-100 text-base-content rounded-bl-md border border-base-300/40"
@@ -156,19 +156,21 @@ const ChatContainer = () => {
                           <img
                             src={message.image}
                             alt="attachment"
-                            className="rounded-xl mb-2 max-w-full max-h-72 object-cover"
+                            className="rounded-t-2xl max-w-full max-h-72 object-cover"
                           />
                         )}
 
                         {message.text && (
-                          <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
-                            {linkifyText(message.text)}
-                          </p>
+                          <div className={`${message.image ? "px-3 py-2.5" : "px-3 py-2"}`}>
+                            <p className="text-[14px] sm:text-[14.5px] leading-[1.38] break-words whitespace-pre-wrap">
+                              {linkifyText(message.text)}
+                            </p>
+                          </div>
                         )}
                       </div>
 
                       <div
-                        className={`mt-1 px-1 flex items-center gap-1 text-[9px] sm:text-[10px] ${
+                        className={`mt-0.5 px-1 flex items-center gap-1 text-[8px] sm:text-[9px] ${
                           isMine
                             ? "justify-end text-base-content/45"
                             : "justify-start text-base-content/40"
