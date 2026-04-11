@@ -72,7 +72,7 @@ const ChatContainer = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-2.5 sm:space-y-3 pb-2">
+          <div className="space-y-2 sm:space-y-2.5 pb-2">
             {messages.map((message, index) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
@@ -135,23 +135,23 @@ const ChatContainer = () => {
                             {message.text}
                           </p>
                         )}
+                      </div>
 
-                        <div
-                          className={`mt-1.5 flex items-center gap-1 text-[11px] ${
-                            isMine
-                              ? "justify-end text-primary-content/80"
-                              : "justify-start text-base-content/45"
-                          }`}
-                        >
-                          <span>{formatMessageTime(message.createdAt)}</span>
+                      <div
+                        className={`mt-1 px-1 flex items-center gap-1 text-[9px] sm:text-[10px] ${
+                          isMine
+                            ? "justify-end text-base-content/45"
+                            : "justify-start text-base-content/40"
+                        }`}
+                      >
+                        <span>{formatMessageTime(message.createdAt)}</span>
 
-                          {isMine &&
-                            (message.seen ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5 opacity-80" />
-                            ))}
-                        </div>
+                        {isMine &&
+                          (message.seen ? (
+                            <CheckCheck className="w-3 h-3 text-blue-400" />
+                          ) : (
+                            <Check className="w-3 h-3" />
+                          ))}
                       </div>
                     </div>
                   </div>
