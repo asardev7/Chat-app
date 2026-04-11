@@ -145,10 +145,7 @@ const ChatContainer = () => {
   const [activeHighlightId, setActiveHighlightId] = useState(null);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 768);
-    };
-
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -160,9 +157,7 @@ const ChatContainer = () => {
     getMessages(selectedUser._id);
     subscribeToMessages();
 
-    return () => {
-      unsubscribeFromMessages();
-    };
+    return () => unsubscribeFromMessages();
   }, [selectedUser]);
 
   useEffect(() => {
@@ -197,7 +192,6 @@ const ChatContainer = () => {
 
   const scrollToOriginalMessage = (messageId) => {
     if (!messageId) return;
-
     const el = messageRefs.current[messageId];
     if (!el) return;
 
@@ -274,9 +268,9 @@ const ChatContainer = () => {
                   ? "You"
                   : message.replyTo?.senderName;
 
-              const bubbleContent = (
+              const bubbleBlock = (
                 <div
-                  className={`group flex w-full items-end gap-2 ${
+                  className={`group relative flex w-full items-end gap-2 ${
                     isMine ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
@@ -297,7 +291,7 @@ const ChatContainer = () => {
                   </div>
 
                   <div
-                    className={`relative flex min-w-0 flex-1 flex-col ${
+                    className={`relative flex min-w-0 flex-col ${
                       isMine ? "items-end" : "items-start"
                     }`}
                   >
@@ -305,10 +299,10 @@ const ChatContainer = () => {
                       <button
                         type="button"
                         onClick={() => handleReply(message, isMine)}
-                        className={`absolute top-1 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-base-300 bg-base-100/96 text-base-content/50 shadow-sm backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:text-primary group-hover:translate-x-0 group-hover:opacity-100 md:flex ${
+                        className={`absolute top-1 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-base-100/95 text-base-content/60 shadow-sm ring-1 ring-base-300 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:text-primary ${
                           isMine
-                            ? "-left-10 translate-x-1 opacity-0"
-                            : "-right-10 -translate-x-1 opacity-0"
+                            ? "-left-11 opacity-0 group-hover:opacity-100"
+                            : "-right-11 opacity-0 group-hover:opacity-100"
                         }`}
                       >
                         <CornerUpLeft className="h-4 w-4" />
@@ -319,7 +313,7 @@ const ChatContainer = () => {
                       ref={(el) => {
                         if (el) messageRefs.current[message._id] = el;
                       }}
-                      className={`max-w-[82vw] sm:max-w-[72%] lg:max-w-[62%] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-500 ${
+                      className={`max-w-[82vw] sm:max-w-[70vw] md:max-w-[32rem] lg:max-w-[38rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-500 ${
                         activeHighlightId === message._id
                           ? "ring-primary/70 shadow-md scale-[1.01]"
                           : "ring-transparent"
@@ -332,13 +326,13 @@ const ChatContainer = () => {
                       {hasReply && (
                         <button
                           type="button"
+                          disabled={!originalMessage}
                           onClick={() => scrollToOriginalMessage(message.replyTo.messageId)}
-                          className={`mx-2 mt-2 block w-[calc(100%-1rem)] rounded-xl border-l-4 px-2.5 py-1.5 text-left text-[11px] transition-all duration-200 ${
+                          className={`mx-2 mt-2 block w-[calc(100%-1rem)] rounded-xl border-l-4 px-2.5 py-1.5 text-left text-[11px] transition-colors duration-200 ${
                             isMine
                               ? "border-primary-content/45 bg-primary-content/15 text-primary-content/85 hover:bg-primary-content/20"
                               : "border-primary bg-base-200 text-base-content/72 hover:bg-base-300/70"
                           } ${originalMessage ? "cursor-pointer" : "cursor-default"}`}
-                          disabled={!originalMessage}
                         >
                           <p className="mb-0.5 truncate text-[10px] font-semibold">
                             {quotedSenderName}
@@ -389,8 +383,6 @@ const ChatContainer = () => {
                           </p>
                         </div>
                       )}
-
-                      {!message.text && hasReply && <div className="pb-2" />}
                     </div>
 
                     <div
@@ -420,13 +412,13 @@ const ChatContainer = () => {
                   }`}
                 >
                   {isDesktop ? (
-                    bubbleContent
+                    bubbleBlock
                   ) : (
                     <SwipeableMessage
                       onSwipe={() => handleReply(message, isMine)}
                       disabled={false}
                     >
-                      {bubbleContent}
+                      {bubbleBlock}
                     </SwipeableMessage>
                   )}
                 </div>
