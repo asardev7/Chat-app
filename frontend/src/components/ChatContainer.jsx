@@ -5,7 +5,7 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { Check, CheckCheck, Reply } from "lucide-react";
+import { Check, CheckCheck, CornerUpLeft } from "lucide-react";
 
 const linkifyText = (text) => {
   if (!text) return null;
@@ -39,7 +39,7 @@ const linkifyText = (text) => {
 
 const SWIPE_THRESHOLD = 60;
 
-const SwipeableMessage = ({ children, onSwipe }) => {
+const SwipeableMessage = ({ children, onSwipe, disabled }) => {
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const [swipeX, setSwipeX] = useState(0);
@@ -47,6 +47,7 @@ const SwipeableMessage = ({ children, onSwipe }) => {
   const [triggered, setTriggered] = useState(false);
 
   const handleTouchStart = (e) => {
+    if (disabled) return;
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     setSwiping(true);
@@ -54,7 +55,7 @@ const SwipeableMessage = ({ children, onSwipe }) => {
   };
 
   const handleTouchMove = (e) => {
-    if (!touchStartX.current) return;
+    if (disabled || !touchStartX.current) return;
 
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
@@ -74,6 +75,8 @@ const SwipeableMessage = ({ children, onSwipe }) => {
   };
 
   const handleTouchEnd = () => {
+    if (disabled) return;
+
     if (triggered) onSwipe();
     setSwipeX(0);
     setSwiping(false);
@@ -89,23 +92,23 @@ const SwipeableMessage = ({ children, onSwipe }) => {
       onTouchEnd={handleTouchEnd}
     >
       <div
-        className={`transition-transform ${swiping ? "" : "duration-200"}`}
+        className={`${swiping ? "" : "duration-200"} transition-transform`}
         style={{ transform: `translateX(${swipeX}px)` }}
       >
         {children}
       </div>
 
-      {swipeX > 10 && (
+      {!disabled && swipeX > 10 && (
         <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center"
+          className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center justify-center"
           style={{ opacity: Math.min(swipeX / SWIPE_THRESHOLD, 1) }}
         >
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              triggered ? "bg-primary text-primary-content scale-110" : "bg-base-300"
-            } transition-all`}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+              triggered ? "scale-110 bg-primary text-primary-content" : "bg-base-300"
+            }`}
           >
-            <Reply className="w-4 h-4" />
+            <CornerUpLeft className="h-4 w-4" />
           </div>
         </div>
       )}
@@ -126,6 +129,18 @@ const ChatContainer = () => {
 
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -153,7 +168,7 @@ const ChatContainer = () => {
 
   if (isMessagesLoading) {
     return (
-      <div className="flex-1 flex flex-col min-h-0 h-full bg-base-200">
+      <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
         <div className="shrink-0">
           <ChatHeader />
         </div>
@@ -170,23 +185,23 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 h-full bg-base-200">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
       <div className="shrink-0">
         <ChatHeader />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-3">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4">
         {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-center px-6">
+          <div className="flex h-full items-center justify-center px-6 text-center">
             <div>
               <p className="text-base font-medium text-base-content/70">No messages yet</p>
-              <p className="text-sm text-base-content/50 mt-1">
+              <p className="mt-1 text-sm text-base-content/50">
                 Start the conversation with {selectedUser?.fullName?.split(" ")[0]}
               </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-1.5 sm:space-y-2 pb-2">
+          <div className="space-y-1.5 pb-2 sm:space-y-2">
             {messages.map((message, index) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
@@ -198,8 +213,130 @@ const ChatContainer = () => {
                 (previousMessage.senderid?._id || previousMessage.senderid)?.toString() ===
                   (message.senderid?._id || message.senderid)?.toString();
 
-              const hasReply =
-                message.replyTo && message.replyTo.messageId;
+              const hasReply = message.replyTo && message.replyTo.messageId;
+
+              const bubbleNode = (
+                <div
+                  className={`group flex items-end gap-2 ${
+                    isMine ? "flex-row-reverse" : "flex-row"
+                  } max-w-[88%] sm:max-w-[76%] lg:max-w-[62%]`}
+                >
+                  <div className="shrink-0 self-end">
+                    {!previousIsSameSender ? (
+                      <img
+                        src={
+                          isMine
+                            ? authUser.profilePic || "/avatar.png"
+                            : selectedUser.profilePic || "/avatar.png"
+                        }
+                        alt="avatar"
+                        className="h-8 w-8 rounded-full border border-base-300 object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8" />
+                    )}
+                  </div>
+
+                  <div className={`relative flex w-full flex-col ${isMine ? "items-end" : "items-start"}`}>
+                    {isDesktop && (
+                      <button
+                        type="button"
+                        onClick={() => handleReply(message, isMine)}
+                        className={`absolute top-1 z-10 hidden md:flex h-7 w-7 items-center justify-center rounded-full border border-base-300 bg-base-100/95 text-base-content/55 shadow-sm backdrop-blur-sm transition-all hover:scale-105 hover:text-primary group-hover:opacity-100 md:opacity-0 ${
+                          isMine ? "-left-10" : "-right-10"
+                        }`}
+                      >
+                        <CornerUpLeft className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+
+                    <div
+                      className={`overflow-hidden rounded-2xl shadow-sm ${
+                        isMine
+                          ? "rounded-br-md bg-primary text-primary-content"
+                          : "rounded-bl-md border border-base-300/40 bg-base-100 text-base-content"
+                      }`}
+                    >
+                      {hasReply && (
+                        <div
+                          className={`mx-2 mt-2 rounded-xl border-l-4 px-2.5 py-2 text-[11px] ${
+                            isMine
+                              ? "border-primary-content/50 bg-primary-content/15 text-primary-content/80"
+                              : "border-primary bg-base-200 text-base-content/70"
+                          }`}
+                        >
+                          <p className="mb-0.5 truncate text-[10px] font-semibold">
+                            {message.replyTo.senderName === authUser.fullName
+                              ? "You"
+                              : message.replyTo.senderName}
+                          </p>
+
+                          {message.replyTo.image && !message.replyTo.text && (
+                            <div className="flex items-center gap-1.5">
+                              <img
+                                src={message.replyTo.image}
+                                alt="reply"
+                                className="h-8 w-8 rounded-md object-cover"
+                              />
+                              <span className="truncate">📷 Photo</span>
+                            </div>
+                          )}
+
+                          {message.replyTo.text && (
+                            <p className="truncate">{message.replyTo.text}</p>
+                          )}
+
+                          {message.replyTo.image && message.replyTo.text && (
+                            <div className="flex items-center gap-1.5">
+                              <img
+                                src={message.replyTo.image}
+                                alt="reply"
+                                className="h-6 w-6 shrink-0 rounded object-cover"
+                              />
+                              <p className="truncate">{message.replyTo.text}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {message.image && (
+                        <img
+                          src={message.image}
+                          alt="attachment"
+                          className={`max-h-72 max-w-full object-cover ${hasReply ? "mt-2" : ""}`}
+                        />
+                      )}
+
+                      {message.text && (
+                        <div className={message.image ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
+                          <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
+                            {linkifyText(message.text)}
+                          </p>
+                        </div>
+                      )}
+
+                      {!message.text && hasReply && <div className="pb-2" />}
+                    </div>
+
+                    <div
+                      className={`mt-0.5 flex items-center gap-1 px-1 text-[8px] sm:text-[9px] ${
+                        isMine
+                          ? "justify-end text-base-content/45"
+                          : "justify-start text-base-content/40"
+                      }`}
+                    >
+                      <span>{formatMessageTime(message.createdAt)}</span>
+
+                      {isMine &&
+                        (message.seen ? (
+                          <CheckCheck className="h-3 w-3 text-blue-400" />
+                        ) : (
+                          <Check className="h-3 w-3" />
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              );
 
               return (
                 <div
@@ -208,121 +345,20 @@ const ChatContainer = () => {
                     previousIsSameSender ? "mt-0.5" : "mt-2.5"
                   }`}
                 >
-                  <div
-                    className={`flex items-end gap-2 max-w-[88%] sm:max-w-[76%] lg:max-w-[62%] ${
-                      isMine ? "flex-row-reverse" : "flex-row"
-                    }`}
-                  >
-                    <div className="shrink-0 self-end">
-                      {!previousIsSameSender ? (
-                        <img
-                          src={
-                            isMine
-                              ? authUser.profilePic || "/avatar.png"
-                              : selectedUser.profilePic || "/avatar.png"
-                          }
-                          alt="avatar"
-                          className="w-8 h-8 rounded-full object-cover border border-base-300"
-                        />
-                      ) : (
-                        <div className="w-8 h-8" />
-                      )}
-                    </div>
-
-                    <div className={`flex flex-col ${isMine ? "items-end" : "items-start"} w-full`}>
-                      <SwipeableMessage onSwipe={() => handleReply(message, isMine)}>
-                        <div
-                          className={`rounded-2xl shadow-sm overflow-hidden ${
-                            isMine
-                              ? "bg-primary text-primary-content rounded-br-md"
-                              : "bg-base-100 text-base-content rounded-bl-md border border-base-300/40"
-                          }`}
-                        >
-                          {hasReply && (
-                            <div
-                              className={`mx-2 mt-2 rounded-xl px-3 py-2 text-[11px] border-l-4 ${
-                                isMine
-                                  ? "bg-primary-content/15 border-primary-content/50 text-primary-content/80"
-                                  : "bg-base-200 border-primary text-base-content/70"
-                              }`}
-                            >
-                              <p className="font-semibold text-[10px] mb-0.5 truncate">
-                                {message.replyTo.senderName === authUser.fullName
-                                  ? "You"
-                                  : message.replyTo.senderName}
-                              </p>
-
-                              {message.replyTo.image && !message.replyTo.text && (
-                                <div className="flex items-center gap-1">
-                                  <img
-                                    src={message.replyTo.image}
-                                    alt="reply"
-                                    className="w-8 h-8 rounded object-cover"
-                                  />
-                                  <span className="truncate">📷 Photo</span>
-                                </div>
-                              )}
-
-                              {message.replyTo.text && (
-                                <p className="truncate">{message.replyTo.text}</p>
-                              )}
-
-                              {message.replyTo.image && message.replyTo.text && (
-                                <div className="flex items-center gap-1">
-                                  <img
-                                    src={message.replyTo.image}
-                                    alt="reply"
-                                    className="w-6 h-6 rounded object-cover shrink-0"
-                                  />
-                                  <p className="truncate">{message.replyTo.text}</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {message.image && (
-                            <img
-                              src={message.image}
-                              alt="attachment"
-                              className={`max-w-full max-h-72 object-cover ${
-                                hasReply ? "mt-2 rounded-t-none" : ""
-                              }`}
-                            />
-                          )}
-
-                          {message.text && (
-                            <div className={`${message.image ? "px-3 py-2.5" : "px-3 py-2"}`}>
-                              <p className="text-[14px] sm:text-[14.5px] leading-[1.38] break-words whitespace-pre-wrap">
-                                {linkifyText(message.text)}
-                              </p>
-                            </div>
-                          )}
-
-                          {!message.text && hasReply && <div className="pb-2" />}
-                        </div>
-                      </SwipeableMessage>
-
-                      <div
-                        className={`mt-0.5 px-1 flex items-center gap-1 text-[8px] sm:text-[9px] ${
-                          isMine
-                            ? "justify-end text-base-content/45"
-                            : "justify-start text-base-content/40"
-                        }`}
-                      >
-                        <span>{formatMessageTime(message.createdAt)}</span>
-
-                        {isMine &&
-                          (message.seen ? (
-                            <CheckCheck className="w-3 h-3 text-blue-400" />
-                          ) : (
-                            <Check className="w-3 h-3" />
-                          ))}
-                      </div>
-                    </div>
-                  </div>
+                  {isDesktop ? (
+                    bubbleNode
+                  ) : (
+                    <SwipeableMessage
+                      onSwipe={() => handleReply(message, isMine)}
+                      disabled={false}
+                    >
+                      {bubbleNode}
+                    </SwipeableMessage>
+                  )}
                 </div>
               );
             })}
+
             <div ref={messageEndRef} />
           </div>
         )}
