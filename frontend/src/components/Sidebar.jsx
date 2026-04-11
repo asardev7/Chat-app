@@ -28,36 +28,39 @@ const Sidebar = () => {
   if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-full md:w-80 border-r border-base-300 bg-base-100 flex flex-col">
-      
-      {/* Premium header */}
-      <div className="border-b border-base-300 w-full p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="size-6" />
-            <span className="font-semibold text-lg">Contacts</span>
-          </div>
+    <aside className="h-full w-full md:w-[320px] lg:w-[340px] border-r border-base-300 bg-base-100 flex flex-col">
+      <div className="border-b border-base-300 px-4 py-4 md:px-5 md:py-5">
+        <div className="flex items-center gap-2">
+          <Users className="size-5 md:size-6 text-base-content" />
+          <span className="text-base md:text-lg font-semibold text-base-content">
+            Contacts
+          </span>
         </div>
 
-        {/* Premium toggle button */}
-        <div className="mt-4">
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showOnlineOnly}
-              onChange={(e) => setShowOnlineOnly(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-base-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-base-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            <span className="ms-3 text-sm font-medium text-base-content">
-              Show online only ({Math.max(onlineUsers.length - 1, 0)})
-            </span>
+        <div className="mt-4 flex items-center">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={showOnlineOnly}
+                onChange={(e) => setShowOnlineOnly(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="h-6 w-11 rounded-full bg-base-300 transition-colors duration-300 peer-checked:bg-primary/80" />
+              <div className="absolute left-[2px] top-[2px] h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 peer-checked:translate-x-5" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-base-content">Show online only</span>
+              <span className="text-xs text-zinc-500">
+                ({Math.max(onlineUsers.length - 1, 0)} online)
+              </span>
+            </div>
           </label>
         </div>
       </div>
 
-      {/* Clean contact list */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto py-2">
         {filteredUsers.map((user) => {
           const unread = unreadCounts?.[user._id] || 0;
           const isSelected = selectedUser?._id === user._id;
@@ -67,51 +70,48 @@ const Sidebar = () => {
             <button
               key={user._id}
               onClick={() => setSelectedUser(user)}
-              className={`w-full px-4 py-3 flex items-center gap-3 transition-all duration-200 ${
-                isSelected 
-                  ? "bg-gradient-to-r from-primary/10 to-primary/5 border-r-2 border-primary shadow-sm" 
+              className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-all duration-200 ${
+                isSelected
+                  ? "bg-base-200/90 border-r-2 border-primary"
                   : "hover:bg-base-200/50"
               }`}
             >
-              {/* Premium avatar */}
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 <img
                   src={user.profilePic || "/avatar.png"}
-                  alt={user.fullName}
-                  className="size-12 object-cover rounded-full ring-1 ring-base-300/50"
+                  alt={user.fullName || user.name}
+                  className="size-12 rounded-full object-cover border border-base-300"
                 />
                 {isOnline && (
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-3 border-base-100 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  </div>
+                  <span className="absolute bottom-0 right-0 size-3.5 rounded-full bg-green-500 ring-2 ring-base-100" />
                 )}
               </div>
 
-              {/* Contact info */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold text-base truncate">{user.fullName}</h3>
-                  {unread > 0 && (
-                    <div className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center">
-                      {unread > 99 ? "99+" : unread}
-                    </div>
-                  )}
-                </div>
-                <p className={`text-sm ${isOnline ? "text-green-500 font-medium" : "text-zinc-500"}`}>
+                <p className="truncate text-[15px] font-semibold text-base-content">
+                  {user.fullName || user.name}
+                </p>
+                <p
+                  className={`mt-0.5 text-sm ${
+                    isOnline ? "text-green-500" : "text-zinc-400"
+                  }`}
+                >
                   {isOnline ? "Online" : "Offline"}
                 </p>
               </div>
+
+              {unread > 0 && (
+                <div className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white">
+                  {unread > 99 ? "99+" : unread}
+                </div>
+              )}
             </button>
           );
         })}
 
         {filteredUsers.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <div className="w-20 h-20 bg-base-200 rounded-2xl flex items-center justify-center mb-4">
-              <Users className="size-8 text-zinc-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-zinc-900 mb-1">No contacts</h3>
-            <p className="text-zinc-500">Enable "Show online only" to see active users</p>
+          <div className="px-4 py-8 text-center text-sm text-zinc-500">
+            No online users
           </div>
         )}
       </div>
