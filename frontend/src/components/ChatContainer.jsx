@@ -8,23 +8,24 @@ import { formatMessageTime } from "../lib/utils";
 import { Check, CheckCheck } from "lucide-react";
 
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, selectedUser, markMessagesAsSeen } = useChatStore();
+  const {
+    messages,
+    getMessages,
+    isMessagesLoading,
+    selectedUser,
+    markMessagesAsSeen,
+    subscribeToMessages,
+    unsubscribeFromMessages,
+  } = useChatStore();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
 
   useEffect(() => {
     if (!selectedUser) return;
     getMessages(selectedUser._id);
-    const { subscribeToMessages, unsubscribeFromMessages } = useChatStore.getState();
     subscribeToMessages();
     return () => unsubscribeFromMessages();
-  }, [selectedUser, getMessages]);
-
-  useEffect(() => {
-    if (selectedUser) {
-      markMessagesAsSeen(selectedUser._id);
-    }
-  }, [selectedUser, messages]);
+  }, [selectedUser]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
@@ -54,16 +55,15 @@ const ChatContainer = () => {
         )}
 
         {messages.map((message) => {
-    
           const isMine =
-            (message.senderid?._id || message.senderid)?.toString() === authUser._id?.toString();
+            (message.senderid?._id || message.senderid)?.toString() ===
+            authUser._id?.toString();
 
           return (
             <div
               key={message._id}
               className={`chat ${isMine ? "chat-end" : "chat-start"}`}
             >
-
               <div className="chat-image avatar">
                 <div className="w-9 rounded-full border border-base-300">
                   <img
@@ -83,9 +83,11 @@ const ChatContainer = () => {
                 </time>
               </div>
 
-              <div className={`chat-bubble flex flex-col gap-2 max-w-[75%] md:max-w-[60%] ${
-                isMine ? "chat-bubble-primary" : ""
-              }`}>
+              <div
+                className={`chat-bubble flex flex-col gap-2 max-w-[75%] md:max-w-[60%] ${
+                  isMine ? "chat-bubble-primary" : ""
+                }`}
+              >
                 {message.image && (
                   <img
                     src={message.image}
@@ -113,6 +115,7 @@ const ChatContainer = () => {
 
         <div ref={messageEndRef} />
       </div>
+
       <MessageInput />
     </div>
   );
