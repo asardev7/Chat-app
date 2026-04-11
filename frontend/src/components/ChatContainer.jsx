@@ -22,6 +22,7 @@ const ChatContainer = () => {
 
   useEffect(() => {
     if (!selectedUser) return;
+
     getMessages(selectedUser._id);
     subscribeToMessages();
 
@@ -37,8 +38,10 @@ const ChatContainer = () => {
   if (isMessagesLoading) {
     return (
       <div className="flex-1 flex flex-col h-full min-h-0 bg-base-200">
-        <ChatHeader />
-        <div className="flex-1 overflow-y-auto">
+        <div className="shrink-0">
+          <ChatHeader />
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <MessageSkeleton />
         </div>
         <div className="shrink-0 border-t border-base-300 bg-base-100">
@@ -54,12 +57,17 @@ const ChatContainer = () => {
         <ChatHeader />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-4 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4">
         {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-zinc-500 text-sm text-center">
-              No messages yet. Start the conversation!
-            </p>
+          <div className="h-full flex items-center justify-center text-center px-6">
+            <div>
+              <p className="text-base font-medium text-base-content/70">
+                No messages yet
+              </p>
+              <p className="text-sm text-base-content/50 mt-1">
+                Start the conversation with {selectedUser?.fullName?.split(" ")[0]}
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -93,7 +101,7 @@ const ChatContainer = () => {
                   </div>
 
                   <div
-                    className={`chat-bubble flex flex-col gap-2 max-w-[75%] md:max-w-[60%] ${
+                    className={`chat-bubble flex flex-col gap-2 max-w-[82%] sm:max-w-[75%] lg:max-w-[60%] ${
                       isMine ? "chat-bubble-primary" : ""
                     }`}
                   >
@@ -101,7 +109,7 @@ const ChatContainer = () => {
                       <img
                         src={message.image}
                         alt="attachment"
-                        className="rounded-lg max-w-full max-h-60 object-cover"
+                        className="rounded-xl max-w-full max-h-72 object-cover"
                       />
                     )}
                     {message.text && (
@@ -128,7 +136,7 @@ const ChatContainer = () => {
         )}
       </div>
 
-      <div className="shrink-0 sticky bottom-0 z-10 border-t border-base-300 bg-base-100">
+      <div className="shrink-0 border-t border-base-300 bg-base-100/95 backdrop-blur-md">
         <MessageInput />
       </div>
     </div>
