@@ -10,6 +10,7 @@ export const useChatStore = create((set, get) => ({
   isUsersLoading: false,
   isMessagesLoading: false,
   replyTo: null,
+  editingMessage: null,
 
   getUsers: async () => {
     set({ isUsersLoading: true });
@@ -62,11 +63,58 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  editMessage: async (messageId, text) => {
+    try {
+      const res = await axiosInstance.put(`/messages/edit/${messageId}`, { text });
+
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId ? res.data : msg
+        ),
+        editingMessage: null,
+      }));
+
+      toast.success("Message updated");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to edit message");
+      throw error;
+    }
+  },
+
+  deleteMessage: async (messageId) => {
+    try {
+      await axiosInstance.delete(`/messages/delete/${messageId}`);
+
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId
+            ? {
+                ...msg,
+                text: "",
+                image: "",
+                gifUrl: "",
+                replyTo: null,
+                deletedForEveryone: true,
+                isEdited: false,
+              }
+            : msg
+        ),
+      }));
+
+      toast.success("Message deleted");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete message");
+      throw error;
+    }
+  },
+
   subscribeToMessages: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
 
     socket.off("newMessage");
+    socket.off("messageUpdated");
+    socket.off("messageDeleted");
 
     socket.on("newMessage", (newMessage) => {
       const { selectedUser } = get();
@@ -88,20 +136,57 @@ export const useChatStore = create((set, get) => ({
         return { messages: [...state.messages, newMessage] };
       });
     });
+
+    socket.on("messageUpdated", (updatedMessage) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        ),
+      }));
+    });
+
+    socket.on("messageDeleted", ({ messageId }) => {
+      set((state) => ({
+        messages: state.messages.map((msg) =>
+          msg._id === messageId
+            ? {
+                ...msg,
+                text: "",
+                image: "",
+                gifUrl: "",
+                replyTo: null,
+                deletedForEveryone: true,
+                isEdited: false,
+              }
+            : msg
+        ),
+      }));
+    });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     socket.off("newMessage");
+    socket.off("messageUpdated");
+    socket.off("messageDeleted");
   },
 
   setReplyTo: (message) => set({ replyTo: message }),
   clearReplyTo: () => set({ replyTo: null }),
 
+  setEditingMessage: (message) =>
+    set({
+      editingMessage: message,
+      replyTo: null,
+    }),
+
+  clearEditingMessage: () => set({ editingMessage: null }),
+
   setSelectedUser: (selectedUser) =>
     set({
       selectedUser,
       replyTo: null,
+      editingMessage: null,
     }),
 }));
