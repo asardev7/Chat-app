@@ -48,10 +48,11 @@ export const verifyUserOTP = async (req, res) => {
       password: result.userData.password,
       isVerified: true,
     });
+
     await newUser.save();
 
     generateToken(newUser._id, res);
-    await triggerBrevo(newUser.email, newUser.fullName); // ✅ fixed — passing fullName
+    await triggerBrevo(newUser.email, newUser.fullName);
 
     res.status(200).json({
       _id: newUser._id,
@@ -70,18 +71,23 @@ export const login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "Invalid Credentials" });
     }
+
     if (!user.isVerified) {
       return res.status(403).json({ message: "Verify your email first" });
     }
+
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       return res.status(400).json({ message: "Invalid Credentials" });
     }
+
     generateToken(user._id, res);
+
     res.status(200).json({
       _id: user._id,
       email: user.email,
@@ -108,15 +114,19 @@ export const updateProfile = async (req, res) => {
   try {
     const { profilePic } = req.body;
     const userid = req.user._id;
+
     if (!profilePic) {
       return res.status(400).json({ message: "Profile picture is required" });
     }
+
     const uploadResponse = await cloudinary.uploader.upload(profilePic);
+
     const updatedUser = await User.findByIdAndUpdate(
       userid,
       { profilePic: uploadResponse.secure_url },
-      { new: true }
+      { returnDocument: "after" }
     );
+
     res.status(200).json(updatedUser);
   } catch (error) {
     console.log("Error in updateProfile :", error.message);
