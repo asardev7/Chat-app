@@ -7,6 +7,36 @@ import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
 import { Check, CheckCheck } from "lucide-react";
 
+const linkifyText = (text) => {
+  if (!text) return null;
+
+  const urlRegex = /((https?:\/\/|www\.)[^\s]+)/gi;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+
+    const isUrl = /^(https?:\/\/|www\.)/i.test(part);
+
+    if (isUrl) {
+      const href = part.startsWith("http") ? part : `https://${part}`;
+      return (
+        <a
+          key={index}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 break-all font-medium"
+        >
+          {part}
+        </a>
+      );
+    }
+
+    return <span key={index}>{part}</span>;
+  });
+};
+
 const ChatContainer = () => {
   const {
     messages,
@@ -132,7 +162,7 @@ const ChatContainer = () => {
 
                         {message.text && (
                           <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
-                            {message.text}
+                            {linkifyText(message.text)}
                           </p>
                         )}
                       </div>
