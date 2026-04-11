@@ -66,3 +66,28 @@ export const sendMessage = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const markMessagesAsSeen = async (req, res) => {
+  try {
+    const { id: senderId } = req.params; // the other user's id
+    const receiverId = req.user._id;
+
+    await Message.updateMany(
+      { senderid: senderId, receiverid: receiverId, seen: false },
+      { $set: { seen: true } }
+    );
+
+    const senderSocketId = getReceiverSocketId(senderId.toString());
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messagesSeen", {
+        by: receiverId,
+        from: senderId,
+      });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Mark seen error:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
