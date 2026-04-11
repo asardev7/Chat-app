@@ -20,8 +20,8 @@ const Sidebar = () => {
   if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-full flex flex-col bg-base-100 border-r border-base-300">
-      {/* Header */}
+    <aside className="h-full w-full flex flex-col bg-base-100 border-r border-base-300 overflow-hidden">
+      
       <div className="px-4 py-4 border-b border-base-300">
         <div className="flex items-center gap-2 mb-3">
           <Users className="w-5 h-5 text-primary" />
