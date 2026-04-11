@@ -11,7 +11,7 @@ const Sidebar = () => {
     selectedUser,
     setSelectedUser,
     isUsersLoading,
-    unreadCounts, 
+    unreadCounts,
   } = useChatStore();
 
   const { onlineUsers } = useAuthStore();
@@ -28,14 +28,17 @@ const Sidebar = () => {
   if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-20 lg:w-72 border-r border-base-300 bg-base-100 flex flex-col">
+    <aside className="h-full w-full sm:w-72 border-r border-base-300 bg-base-100 flex flex-col">
+
+      {/* Header */}
       <div className="border-b border-base-300 w-full p-5">
         <div className="flex items-center gap-2">
           <Users className="size-6" />
-          <span className="font-medium hidden lg:block">Contacts</span>
+          <span className="font-medium">Contacts</span>
         </div>
 
-        <div className="mt-3 hidden lg:flex items-center gap-2">
+        {/* Online toggle — visible on ALL screen sizes */}
+        <div className="mt-3 flex items-center gap-2">
           <label className="cursor-pointer flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -45,13 +48,16 @@ const Sidebar = () => {
             />
             <span>Show online only</span>
           </label>
-          <span className="text-xs text-zinc-500">({Math.max(onlineUsers.length - 1, 0)} online)</span>
+          <span className="text-xs text-zinc-500">
+            ({Math.max(onlineUsers.length - 1, 0)} online)
+          </span>
         </div>
       </div>
 
+      {/* User list */}
       <div className="overflow-y-auto w-full py-3">
         {filteredUsers.map((user) => {
-          const unread = unreadCounts?.[user._id] || 0; 
+          const unread = unreadCounts?.[user._id] || 0;
           const isSelected = selectedUser?._id === user._id;
           const isOnline = onlineUsers.includes(user._id);
 
@@ -59,14 +65,15 @@ const Sidebar = () => {
             <button
               key={user._id}
               onClick={() => setSelectedUser(user)}
-              className={`w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors relative ${
-                isSelected ? "bg-base-300 ring-1 ring-base-300" : ""
+              className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-base-300 transition-colors relative ${
+                isSelected ? "bg-base-300" : ""
               }`}
             >
-              <div className="relative mx-auto lg:mx-0">
+              {/* Avatar with online dot */}
+              <div className="relative shrink-0">
                 <img
                   src={user.profilePic || "/avatar.png"}
-                  alt={user.fullName || user.name}
+                  alt={user.fullName}
                   className="size-12 object-cover rounded-full"
                 />
                 {isOnline && (
@@ -74,21 +81,19 @@ const Sidebar = () => {
                 )}
               </div>
 
-              <div className="hidden lg:block text-left min-w-0 flex-1">
-                <div className="font-medium truncate">{user.fullName || user.name}</div>
+              {/* Name + status — always visible on all screen sizes */}
+              <div className="text-left min-w-0 flex-1">
+                <div className="font-medium truncate">{user.fullName}</div>
                 <div className="text-sm text-zinc-400">
                   {isOnline ? "Online" : "Offline"}
                 </div>
               </div>
 
+              {/* Unread count badge */}
               {unread > 0 && (
-                <div className="hidden lg:flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold items-center justify-center">
+                <div className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold flex items-center justify-center shrink-0">
                   {unread > 99 ? "99+" : unread}
                 </div>
-              )}
-
-              {unread > 0 && (
-                <div className="lg:hidden absolute top-3 right-3 size-3 rounded-full bg-red-500" />
               )}
             </button>
           );
