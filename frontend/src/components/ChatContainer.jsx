@@ -186,6 +186,7 @@ const ChatContainer = () => {
       _id: message._id,
       text: message.text || null,
       image: message.image || null,
+      gifUrl: message.gifUrl || null,
       senderName: isMine ? authUser.fullName : selectedUser.fullName,
     });
   };
@@ -349,7 +350,18 @@ const ChatContainer = () => {
                             </div>
                           )}
 
-                          {message.replyTo.text && !message.replyTo.image && (
+                          {message.replyTo.gifUrl && !message.replyTo.text && !message.replyTo.image && (
+                            <div className="flex items-center gap-1.5">
+                              <img
+                                src={message.replyTo.gifUrl}
+                                alt="reply gif"
+                                className="h-7 w-7 rounded-md object-cover"
+                              />
+                              <span className="truncate">GIF</span>
+                            </div>
+                          )}
+
+                          {message.replyTo.text && !message.replyTo.image && !message.replyTo.gifUrl && (
                             <p className="truncate leading-4">{message.replyTo.text}</p>
                           )}
 
@@ -366,6 +378,16 @@ const ChatContainer = () => {
                         </button>
                       )}
 
+                      {message.gifUrl && (
+                        <img
+                          src={message.gifUrl}
+                          alt="gif"
+                          className={`max-h-72 w-full max-w-full object-cover ${
+                            hasReply ? "mt-2" : ""
+                          }`}
+                        />
+                      )}
+
                       {message.image && (
                         <img
                           src={message.image}
@@ -377,7 +399,7 @@ const ChatContainer = () => {
                       )}
 
                       {message.text && (
-                        <div className={message.image ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
+                        <div className={message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
                           <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
                             {linkifyText(message.text)}
                           </p>
@@ -414,10 +436,7 @@ const ChatContainer = () => {
                   {isDesktop ? (
                     bubbleBlock
                   ) : (
-                    <SwipeableMessage
-                      onSwipe={() => handleReply(message, isMine)}
-                      disabled={false}
-                    >
+                    <SwipeableMessage onSwipe={() => handleReply(message, isMine)} disabled={false}>
                       {bubbleBlock}
                     </SwipeableMessage>
                   )}
