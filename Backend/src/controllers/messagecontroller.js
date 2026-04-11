@@ -1,5 +1,5 @@
 import User from "../models/user.model.js";
-import Message from "../middleware/message.model.js";
+import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.io.js";
 
@@ -27,7 +27,7 @@ export const getMessages = async (req, res) => {
         { senderid: senderId, receiverid: userToChatId },
         { senderid: userToChatId, receiverid: senderId },
       ],
-    });
+    }).sort({ createdAt: 1 });
 
     res.status(200).json(messages);
   } catch (error) {
@@ -75,6 +75,99 @@ export const sendMessage = async (req, res) => {
     res.status(201).json(newMessage);
   } catch (error) {
     console.error("Error in sendMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const editMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id.toString();
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (message.senderid.toString() !== userId) {
+      return res.status(403).json({ message: "You can edit only your own messages" });
+    }
+
+    if (message.deletedForEveryone) {
+      return res.status(400).json({ message: "Deleted message cannot be edited" });
+    }
+
+    const nextText = (text || "").trim();
+
+    if (!nextText) {
+      return res.status(400).json({ message: "Message cannot be empty" });
+    }
+
+    if (message.image || message.gifUrl) {
+      return res.status(400).json({ message: "Only text messages can be edited" });
+    }
+
+    message.text = nextText;
+    message.isEdited = true;
+
+    await message.save();
+
+    const receiverSocketId = getReceiverSocketId(message.receiverid.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageUpdated", message);
+    }
+
+    const senderSocketId = getReceiverSocketId(message.senderid.toString());
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageUpdated", message);
+    }
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.error("Error in editMessage:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const { id: messageId } = req.params;
+    const userId = req.user._id.toString();
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (message.senderid.toString() !== userId) {
+      return res.status(403).json({ message: "You can delete only your own messages" });
+    }
+
+    message.text = "";
+    message.image = "";
+    message.gifUrl = "";
+    message.replyTo = null;
+    message.deletedForEveryone = true;
+    message.isEdited = false;
+
+    await message.save();
+
+    const receiverSocketId = getReceiverSocketId(message.receiverid.toString());
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("messageDeleted", { messageId: message._id });
+    }
+
+    const senderSocketId = getReceiverSocketId(message.senderid.toString());
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("messageDeleted", { messageId: message._id });
+    }
+
+    res.status(200).json({ success: true, messageId: message._id });
+  } catch (error) {
+    console.error("Error in deleteMessage:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
