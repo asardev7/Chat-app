@@ -73,15 +73,11 @@ export const useChatStore = create((set, get) => ({
 
       const senderId = (newMessage.senderid?._id || newMessage.senderid)?.toString();
       const receiverId = (newMessage.receiverid?._id || newMessage.receiverid)?.toString();
-
       const selectedId = selectedUser._id?.toString();
       const authId = useAuthStore.getState().authUser?._id?.toString();
 
-      const isRelevantIncoming =
-        senderId === selectedId && receiverId === authId;
-
-      const isRelevantOutgoing =
-        senderId === authId && receiverId === selectedId;
+      const isRelevantIncoming = senderId === selectedId && receiverId === authId;
+      const isRelevantOutgoing = senderId === authId && receiverId === selectedId;
 
       if (!isRelevantIncoming && !isRelevantOutgoing) return;
 
