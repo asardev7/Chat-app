@@ -48,6 +48,7 @@ const MessageInput = () => {
 
       setText("");
       setImagePreview(null);
+
       if (fileInputRef.current) fileInputRef.current.value = "";
       inputRef.current?.focus();
     } catch (error) {
