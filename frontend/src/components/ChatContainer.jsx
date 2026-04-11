@@ -205,10 +205,7 @@ const ChatContainer = () => {
 
   if (isMessagesLoading) {
     return (
-      <div
-        className="flex flex-col bg-base-200"
-        style={{ height: "100dvh" }}
-      >
+      <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
         <div className="shrink-0">
           <ChatHeader />
         </div>
@@ -223,15 +220,12 @@ const ChatContainer = () => {
   }
 
   return (
-    <div
-      className="flex flex-col bg-base-200"
-      style={{ height: "100dvh" }}
-    >
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
       <div className="shrink-0">
         <ChatHeader />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:px-4 sm:py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-3 sm:px-4">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div>
@@ -242,7 +236,7 @@ const ChatContainer = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-1 pb-2">
+          <div className="space-y-1.5 pb-2">
             {messages.map((message, index) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
@@ -270,7 +264,6 @@ const ChatContainer = () => {
                     isMine ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
-                  {/* Avatar — gap reduced to gap-1.5 */}
                   <div className="shrink-0 self-end">
                     {!previousIsSameSender ? (
                       <img
@@ -310,7 +303,7 @@ const ChatContainer = () => {
                       ref={(el) => {
                         if (el) messageRefs.current[message._id] = el;
                       }}
-                      className={`max-w-[80vw] sm:max-w-[70vw] md:max-w-[32rem] lg:max-w-[38rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-500 ${
+                      className={`max-w-[82vw] sm:max-w-[70vw] md:max-w-[32rem] lg:max-w-[38rem] overflow-hidden rounded-2xl shadow-sm ring-1 transition-all duration-500 ${
                         activeHighlightId === message._id
                           ? "ring-primary/70 shadow-md scale-[1.01]"
                           : "ring-transparent"
@@ -382,7 +375,7 @@ const ChatContainer = () => {
                         <img
                           src={message.gifUrl}
                           alt="gif"
-                          className={`max-h-64 w-full max-w-full object-cover ${
+                          className={`max-h-72 w-full max-w-full object-cover ${
                             hasReply ? "mt-2" : ""
                           }`}
                         />
@@ -392,7 +385,7 @@ const ChatContainer = () => {
                         <img
                           src={message.image}
                           alt="attachment"
-                          className={`max-h-64 w-full max-w-full object-cover ${
+                          className={`max-h-72 w-full max-w-full object-cover ${
                             hasReply ? "mt-2" : ""
                           }`}
                         />
@@ -401,12 +394,10 @@ const ChatContainer = () => {
                       {message.text && (
                         <div
                           className={
-                            message.image || message.gifUrl
-                              ? "px-2.5 py-2"
-                              : "px-2.5 py-1.5"
+                            message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"
                           }
                         >
-                          <p className="break-words whitespace-pre-wrap text-[13.5px] leading-[1.32] sm:text-[14.5px]">
+                          <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
                             {linkifyText(message.text)}
                           </p>
                         </div>
@@ -414,7 +405,7 @@ const ChatContainer = () => {
                     </div>
 
                     <div
-                      className={`mt-0.5 flex items-center gap-1 px-0.5 text-[10px] ${
+                      className={`mt-0.5 flex items-center gap-1 px-1 text-[10px] ${
                         isMine
                           ? "justify-end text-base-content/45"
                           : "justify-start text-base-content/40"
@@ -436,7 +427,7 @@ const ChatContainer = () => {
                 <div
                   key={message._id}
                   className={`flex ${isMine ? "justify-end" : "justify-start"} ${
-                    previousIsSameSender ? "mt-0.5" : "mt-2"
+                    previousIsSameSender ? "mt-0.5" : "mt-2.5"
                   }`}
                 >
                   {isDesktop ? (
@@ -452,7 +443,6 @@ const ChatContainer = () => {
                 </div>
               );
             })}
-
             <div ref={messageEndRef} />
           </div>
         )}
