@@ -5,7 +5,15 @@ import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import { Users } from "lucide-react";
 
 const Sidebar = () => {
-  const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
+  const {
+    getUsers,
+    users,
+    selectedUser,
+    setSelectedUser,
+    isUsersLoading,
+    unreadCounts,
+  } = useChatStore();
+
   const { onlineUsers } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
@@ -20,94 +28,76 @@ const Sidebar = () => {
   if (isUsersLoading) return <SidebarSkeleton />;
 
   return (
-    <aside className="h-full w-full flex flex-col bg-base-100 border-r border-base-300 overflow-hidden">
-      <div className="shrink-0 px-4 py-4 border-b border-base-300 bg-base-100">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-semibold text-base">Contacts</h2>
-              <p className="text-xs text-base-content/50">
-                {onlineUsers.filter((id) => users.some((u) => u._id === id)).length} online
-              </p>
-            </div>
-          </div>
+    <aside className="h-full w-20 lg:w-72 border-r border-base-300 bg-base-100 flex flex-col">
+      <div className="border-b border-base-300 w-full p-5">
+        <div className="flex items-center gap-2">
+          <Users className="size-6" />
+          <span className="font-medium hidden lg:block">Contacts</span>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-base-200/70 px-3 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">Show online only</p>
-            <p className="text-xs text-base-content/50">Filter active contacts</p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowOnlineOnly(!showOnlineOnly)}
-            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-              showOnlineOnly ? "bg-primary" : "bg-base-300"
-            }`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                showOnlineOnly ? "translate-x-6" : "translate-x-1"
-              }`}
+        <div className="mt-3 hidden lg:flex items-center gap-2">
+          <label className="cursor-pointer flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showOnlineOnly}
+              onChange={(e) => setShowOnlineOnly(e.target.checked)}
+              className="checkbox checkbox-sm"
             />
-          </button>
+            <span>Show online only</span>
+          </label>
+          <span className="text-xs text-zinc-500">({onlineUsers.length - 1} online)</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {filteredUsers.length > 0 ? (
-          <div className="p-2">
-            {filteredUsers.map((user) => {
-              const isOnline = onlineUsers.includes(user._id);
-              const isSelected = selectedUser?._id === user._id;
+      <div className="overflow-y-auto w-full py-3">
+        {filteredUsers.map((user) => {
+          const unread = unreadCounts?.[user._id] || 0;
+          const isSelected = selectedUser?._id === user._id;
+          const isOnline = onlineUsers.includes(user._id);
 
-              return (
-                <button
-                  key={user._id}
-                  onClick={() => setSelectedUser(user)}
-                  className={`w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all mb-1
-                    ${
-                      isSelected
-                        ? "bg-primary/10 border border-primary/20"
-                        : "hover:bg-base-200 border border-transparent"
-                    }`}
-                >
-                  <div className="relative shrink-0">
-                    <img
-                      src={user.profilePic || "/avatar.png"}
-                      alt={user.fullName}
-                      className="w-12 h-12 rounded-full object-cover border border-base-300"
-                    />
-                    <span
-                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-base-100 ${
-                        isOnline ? "bg-green-500" : "bg-base-300"
-                      }`}
-                    />
-                  </div>
+          return (
+            <button
+              key={user._id}
+              onClick={() => setSelectedUser(user)}
+              className={`w-full p-3 flex items-center gap-3 hover:bg-base-300 transition-colors relative ${
+                isSelected ? "bg-base-300 ring-1 ring-base-300" : ""
+              }`}
+            >
+              <div className="relative mx-auto lg:mx-0">
+                <img
+                  src={user.profilePic || "/avatar.png"}
+                  alt={user.name}
+                  className="size-12 object-cover rounded-full"
+                />
+                {isOnline && (
+                  <span
+                    className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900"
+                  />
+                )}
+              </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{user.fullName}</p>
-                    <p className={`text-sm ${isOnline ? "text-green-500" : "text-base-content/50"}`}>
-                      {isOnline ? "Online" : "Offline"}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center px-6 text-center">
-            <div>
-              <p className="font-medium text-base-content/70">No contacts found</p>
-              <p className="text-sm text-base-content/50 mt-1">
-                Try turning off the online-only filter
-              </p>
-            </div>
-          </div>
+              <div className="hidden lg:block text-left min-w-0 flex-1">
+                <div className="font-medium truncate">{user.fullName}</div>
+                <div className="text-sm text-zinc-400">
+                  {isOnline ? "Online" : "Offline"}
+                </div>
+              </div>
+
+              {unread > 0 && (
+                <div className="hidden lg:flex min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold items-center justify-center">
+                  {unread > 99 ? "99+" : unread}
+                </div>
+              )}
+
+              {unread > 0 && (
+                <div className="lg:hidden absolute top-3 right-3 size-3 rounded-full bg-red-500" />
+              )}
+            </button>
+          );
+        })}
+
+        {filteredUsers.length === 0 && (
+          <div className="text-center text-zinc-500 py-4">No online users</div>
         )}
       </div>
     </aside>
