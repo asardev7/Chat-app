@@ -377,9 +377,7 @@ const ChatContainer = () => {
                         type="button"
                         onClick={() => openActions(message, isMine)}
                         className={`absolute top-1 z-20 flex h-8 min-w-[3.5rem] items-center justify-center rounded-full bg-base-100/95 px-3 text-[11px] font-medium text-base-content/70 shadow-sm ring-1 ring-base-300 backdrop-blur-sm transition-all duration-300 ease-out hover:scale-105 hover:text-primary ${
-                          isMine
-                            ? "-left-16 opacity-0 group-hover:opacity-100"
-                            : "-right-16 opacity-0 group-hover:opacity-100"
+                          isMine ? "-left-16 opacity-0 group-hover:opacity-100" : "-right-16 opacity-0 group-hover:opacity-100"
                         }`}
                       >
                         Edit
@@ -415,76 +413,43 @@ const ChatContainer = () => {
                             {quotedSenderName}
                           </p>
 
-                          {message.replyTo.image && !message.replyTo.text && (
-                            <div className="flex items-center gap-1.5">
-                              <img
-                                src={message.replyTo.image}
-                                alt="reply"
-                                className="h-7 w-7 rounded-md object-cover"
-                              />
-                              <span className="truncate">📷 Photo</span>
-                            </div>
-                          )}
-
-                          {message.replyTo.gifUrl && !message.replyTo.text && !message.replyTo.image && (
-                            <div className="flex items-center gap-1.5">
-                              <img
-                                src={message.replyTo.gifUrl}
-                                alt="reply gif"
-                                className="h-7 w-7 rounded-md object-cover"
-                              />
-                              <span className="truncate">GIF</span>
-                            </div>
-                          )}
-
-                          {message.replyTo.text && !message.replyTo.image && !message.replyTo.gifUrl && (
+                          {message.replyTo.text && (
                             <p className="truncate leading-4">{message.replyTo.text}</p>
                           )}
-
-                          {message.replyTo.image && message.replyTo.text && (
-                            <div className="flex items-center gap-1.5">
-                              <img
-                                src={message.replyTo.image}
-                                alt="reply"
-                                className="h-6 w-6 shrink-0 rounded object-cover"
-                              />
-                              <p className="truncate leading-4">{message.replyTo.text}</p>
-                            </div>
-                          )}
                         </button>
-                      )}
-
-                      {!message.deletedForEveryone && message.gifUrl && (
-                        <img
-                          src={message.gifUrl}
-                          alt="gif"
-                          className={`max-h-72 w-full max-w-full object-cover ${
-                            hasReply ? "mt-2" : ""
-                          }`}
-                        />
-                      )}
-
-                      {!message.deletedForEveryone && message.image && (
-                        <img
-                          src={message.image}
-                          alt="attachment"
-                          className={`max-h-72 w-full max-w-full object-cover ${
-                            hasReply ? "mt-2" : ""
-                          }`}
-                        />
                       )}
 
                       {message.deletedForEveryone ? (
                         <div className="px-2.5 py-2">
                           <p className="text-[13px] italic opacity-75">This message was deleted</p>
                         </div>
-                      ) : message.text ? (
-                        <div className={message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
-                          <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
-                            {linkifyText(message.text)}
-                          </p>
-                        </div>
-                      ) : null}
+                      ) : (
+                        <>
+                          {message.gifUrl && (
+                            <img
+                              src={message.gifUrl}
+                              alt="gif"
+                              className={`max-h-72 w-full max-w-full object-cover ${hasReply ? "mt-2" : ""}`}
+                            />
+                          )}
+
+                          {message.image && (
+                            <img
+                              src={message.image}
+                              alt="attachment"
+                              className={`max-h-72 w-full max-w-full object-cover ${hasReply ? "mt-2" : ""}`}
+                            />
+                          )}
+
+                          {message.text && (
+                            <div className={message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
+                              <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
+                                {linkifyText(message.text)}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
 
                     <div
@@ -517,11 +482,14 @@ const ChatContainer = () => {
                   }`}
                 >
                   {isDesktop ? (
-                    <div onContextMenu={(e) => {
-                      if (!isMine || message.deletedForEveryone) return;
-                      e.preventDefault();
-                      openActions(message, isMine);
-                    }} className="w-full">
+                    <div
+                      onContextMenu={(e) => {
+                        if (!isMine || message.deletedForEveryone) return;
+                        e.preventDefault();
+                        openActions(message, isMine);
+                      }}
+                      className="w-full"
+                    >
                       {bubbleBlock}
                     </div>
                   ) : (
@@ -548,10 +516,7 @@ const ChatContainer = () => {
 
       {actionMessage && (
         <>
-          <div
-            className="fixed inset-0 z-40 bg-black/30"
-            onClick={closeActions}
-          />
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={closeActions} />
           <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border border-base-300 bg-base-100 p-3 shadow-2xl sm:left-1/2 sm:right-auto sm:bottom-6 sm:w-[24rem] sm:-translate-x-1/2 sm:rounded-3xl">
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-base-300 sm:hidden" />
 
