@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import {
@@ -29,11 +29,12 @@ const MessageInput = () => {
 
   const [sheetTranslateY, setSheetTranslateY] = useState(0);
   const [draggingSheet, setDraggingSheet] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const dragStartYRef = useRef(null);
 
   const fileInputRef = useRef(null);
-  const inputRef = useRef(null);
+  const textareaRef = useRef(null);
   const attachWrapRef = useRef(null);
   const gifSheetRef = useRef(null);
 
@@ -47,6 +48,45 @@ const MessageInput = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    const updateViewportOffset = () => {
+      if (!window.visualViewport || window.innerWidth >= 768) {
+        setKeyboardOffset(0);
+        return;
+      }
+
+      const vv = window.visualViewport;
+      const bottomGap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(bottomGap);
+    };
+
+    updateViewportOffset();
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateViewportOffset);
+      window.visualViewport.addEventListener("scroll", updateViewportOffset);
+    }
+
+    window.addEventListener("resize", updateViewportOffset);
+    window.addEventListener("orientationchange", updateViewportOffset);
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", updateViewportOffset);
+        window.visualViewport.removeEventListener("scroll", updateViewportOffset);
+      }
+      window.removeEventListener("resize", updateViewportOffset);
+      window.removeEventListener("orientationchange", updateViewportOffset);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }, [text]);
+
   const closeAllPopups = () => {
     setShowAttachMenu(false);
     setShowGifPicker(false);
@@ -57,28 +97,25 @@ const MessageInput = () => {
   };
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        attachWrapRef.current &&
-        !attachWrapRef.current.contains(e.target) &&
-        gifSheetRef.current &&
-        !gifSheetRef.current.contains(e.target)
-      ) {
-        closeAllPopups();
-      }
+    const handlePointerDown = (e) => {
+      const clickedInsideAttach =
+        attachWrapRef.current && attachWrapRef.current.contains(e.target);
+      const clickedInsideGif =
+        gifSheetRef.current && gifSheetRef.current.contains(e.target);
 
-      if (
-        attachWrapRef.current &&
-        !attachWrapRef.current.contains(e.target) &&
-        !showGifPicker
-      ) {
-        setShowAttachMenu(false);
+      if (!clickedInsideAttach && !clickedInsideGif) {
+        closeAllPopups();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showGifPicker]);
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, []);
 
   const fetchGifs = async (query = "") => {
     if (!GIPHY_KEY) {
@@ -111,11 +148,9 @@ const MessageInput = () => {
 
   useEffect(() => {
     if (!showGifPicker) return;
-
     const timer = setTimeout(() => {
       fetchGifs(gifSearch);
     }, 350);
-
     return () => clearTimeout(timer);
   }, [gifSearch, showGifPicker]);
 
@@ -129,7 +164,10 @@ const MessageInput = () => {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+      setGifPreview(null);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -182,7 +220,11 @@ const MessageInput = () => {
       setGifPreview(null);
 
       if (fileInputRef.current) fileInputRef.current.value = "";
-      inputRef.current?.focus();
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "0px";
+        textareaRef.current.style.height = "42px";
+      }
+      textareaRef.current?.focus();
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {
@@ -200,7 +242,6 @@ const MessageInput = () => {
     if (!isMobile || dragStartYRef.current === null) return;
 
     const deltaY = e.touches[0].clientY - dragStartYRef.current;
-
     if (deltaY > 0) {
       setSheetTranslateY(deltaY);
     }
@@ -219,17 +260,29 @@ const MessageInput = () => {
     dragStartYRef.current = null;
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
+    }
+  };
+
   const isMyReply = replyTo?.senderName === authUser?.fullName;
+  const canSend = Boolean(text.trim() || imagePreview || gifPreview);
 
   return (
-    <div className="relative border-t border-base-300 bg-base-100 px-2.5 py-2 sm:px-4 sm:py-3">
+    <div
+      className="relative shrink-0 border-t border-base-300 bg-base-100 px-2.5 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-3"
+      style={{
+        transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : "translateY(0)",
+        transition: "transform 180ms ease",
+      }}
+    >
       {showGifPicker && (
         <>
           <div
-            className={`absolute inset-0 z-30 bg-black/20 ${
-              isMobile ? "fixed" : "absolute"
-            }`}
-            onClick={() => closeAllPopups()}
+            className={`absolute inset-0 z-30 bg-black/20 ${isMobile ? "fixed" : "absolute"}`}
+            onClick={closeAllPopups}
           />
 
           <div
@@ -243,9 +296,7 @@ const MessageInput = () => {
                 ? "fixed inset-x-0 bottom-0 mx-auto h-[68vh] rounded-t-[28px]"
                 : "absolute bottom-full left-0 mb-2 w-[min(92vw,24rem)] rounded-3xl"
             } ${draggingSheet ? "transition-none" : "transition-transform duration-250 ease-out"}`}
-            style={
-              isMobile ? { transform: `translateY(${sheetTranslateY}px)` } : undefined
-            }
+            style={isMobile ? { transform: `translateY(${sheetTranslateY}px)` } : undefined}
           >
             {isMobile && (
               <div className="flex justify-center pt-2.5">
@@ -267,7 +318,7 @@ const MessageInput = () => {
 
               <button
                 type="button"
-                onClick={() => closeAllPopups()}
+                onClick={closeAllPopups}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-base-content/60 transition-colors hover:bg-base-200"
               >
                 <X className="h-4.5 w-4.5" />
@@ -291,10 +342,7 @@ const MessageInput = () => {
               {gifLoading ? (
                 <div className="grid grid-cols-2 gap-2">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-28 animate-pulse rounded-2xl bg-base-300/60"
-                    />
+                    <div key={i} className="h-28 animate-pulse rounded-2xl bg-base-300/60" />
                   ))}
                 </div>
               ) : gifResults.length > 0 ? (
@@ -325,12 +373,8 @@ const MessageInput = () => {
               ) : (
                 <div className="flex h-full items-center justify-center px-4 text-center">
                   <div>
-                    <p className="text-sm font-semibold text-base-content/70">
-                      No GIFs found
-                    </p>
-                    <p className="mt-1 text-xs text-base-content/50">
-                      Try another keyword
-                    </p>
+                    <p className="text-sm font-semibold text-base-content/70">No GIFs found</p>
+                    <p className="mt-1 text-xs text-base-content/50">Try another keyword</p>
                   </div>
                 </div>
               )}
@@ -340,7 +384,7 @@ const MessageInput = () => {
       )}
 
       {replyTo && (
-        <div className="mb-2 flex items-start gap-2 rounded-2xl border border-base-300 bg-base-200/70 px-2.5 py-2">
+        <div className="mb-2.5 flex items-start gap-2 rounded-2xl border border-base-300 bg-base-200/70 px-2.5 py-2.5">
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <CornerUpLeft className="h-3.5 w-3.5" />
           </div>
@@ -351,11 +395,13 @@ const MessageInput = () => {
             </p>
 
             {replyTo.text ? (
-              <p className="truncate text-[12px] text-base-content/65">{replyTo.text}</p>
+              <p className="whitespace-pre-wrap break-words text-[12px] leading-4 text-base-content/65">
+                {replyTo.text}
+              </p>
             ) : replyTo.image ? (
-              <p className="truncate text-[12px] text-base-content/65">📷 Photo</p>
+              <p className="text-[12px] text-base-content/65">📷 Photo</p>
             ) : replyTo.gifUrl ? (
-              <p className="truncate text-[12px] text-base-content/65">GIF</p>
+              <p className="text-[12px] text-base-content/65">GIF</p>
             ) : null}
           </div>
 
@@ -386,7 +432,7 @@ const MessageInput = () => {
       )}
 
       {imagePreview && (
-        <div className="relative mb-2 inline-flex">
+        <div className="relative mb-2.5 inline-flex">
           <img
             src={imagePreview}
             alt="Preview"
@@ -403,7 +449,7 @@ const MessageInput = () => {
       )}
 
       {gifPreview && (
-        <div className="relative mb-2 inline-flex">
+        <div className="relative mb-2.5 inline-flex">
           <img
             src={gifPreview}
             alt="GIF Preview"
@@ -478,20 +524,24 @@ const MessageInput = () => {
           )}
         </div>
 
-        <div className="flex min-h-[42px] flex-1 items-center rounded-2xl border border-base-300 bg-base-100 px-3 sm:min-h-[44px] sm:px-4">
-          <input
-            ref={inputRef}
-            type="text"
-            className="h-10 w-full bg-transparent text-[14px] outline-none placeholder:text-base-content/40 sm:h-11 sm:text-sm"
-            placeholder={replyTo ? "Reply..." : "Type a message..."}
+        <div className="flex min-h-[44px] flex-1 items-end rounded-2xl border border-base-300 bg-base-100 px-3 py-2">
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={replyTo ? "Reply..." : "Type a message..."}
+            className="max-h-[140px] min-h-[24px] w-full resize-none bg-transparent text-[14px] leading-5 outline-none placeholder:text-base-content/40"
+            style={{
+              overflowY: text.length > 0 ? "auto" : "hidden",
+            }}
           />
         </div>
 
         <button
           type="submit"
-          disabled={(!text.trim() && !imagePreview && !gifPreview) || isSending}
+          disabled={!canSend || isSending}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-content transition-all duration-200 hover:scale-[1.02] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:h-11 sm:w-11"
         >
           <Send className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
