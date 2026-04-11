@@ -99,14 +99,18 @@ export const editMessage = async (req, res) => {
       return res.status(400).json({ message: "Deleted message cannot be edited" });
     }
 
-    const nextText = (text || "").trim();
-
-    if (!nextText) {
-      return res.status(400).json({ message: "Message cannot be empty" });
+    if (message.isEdited) {
+      return res.status(400).json({ message: "Message can be edited only one time" });
     }
 
     if (message.image || message.gifUrl) {
       return res.status(400).json({ message: "Only text messages can be edited" });
+    }
+
+    const nextText = (text || "").trim();
+
+    if (!nextText) {
+      return res.status(400).json({ message: "Message cannot be empty" });
     }
 
     message.text = nextText;
@@ -151,7 +155,6 @@ export const deleteMessage = async (req, res) => {
     message.gifUrl = "";
     message.replyTo = null;
     message.deletedForEveryone = true;
-    message.isEdited = false;
 
     await message.save();
 
