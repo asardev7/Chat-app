@@ -5,10 +5,11 @@ import {
   Image,
   Send,
   X,
-  CornerUpLeft,
+ CornerUpLeft,
   Gift,
   Plus,
   Search,
+  Pencil,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -35,7 +36,15 @@ const MessageInput = () => {
   const attachWrapRef = useRef(null);
   const gifSheetRef = useRef(null);
 
-  const { sendMessage, replyTo, clearReplyTo } = useChatStore();
+  const {
+    sendMessage,
+    editMessage,
+    replyTo,
+    clearReplyTo,
+    editingMessage,
+    clearEditingMessage,
+  } = useChatStore();
+
   const { authUser } = useAuthStore();
 
   useEffect(() => {
@@ -77,12 +86,28 @@ const MessageInput = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (editingMessage) {
+      setText(editingMessage.text || "");
+      setImagePreview(null);
+      setGifPreview(null);
+      setShowAttachMenu(false);
+      setShowGifPicker(false);
+
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        const len = editingMessage.text?.length || 0;
+        textareaRef.current?.setSelectionRange(len, len);
+      }, 0);
+    }
+  }, [editingMessage]);
+
   useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "0px";
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
-  }, [text]);
+  }, [text, editingMessage]);
 
   const closeAllPopups = () => {
     setShowAttachMenu(false);
@@ -155,6 +180,8 @@ const MessageInput = () => {
   }, [gifSearch, showGifPicker]);
 
   const handleImageChange = (e) => {
+    if (editingMessage) return;
+
     const file = e.target.files[0];
     if (!file) return;
 
@@ -181,6 +208,8 @@ const MessageInput = () => {
   };
 
   const handleSelectGif = (gif) => {
+    if (editingMessage) return;
+
     const url =
       gif?.images?.fixed_height?.url ||
       gif?.images?.original?.url ||
@@ -197,6 +226,7 @@ const MessageInput = () => {
   };
 
   const openGifPicker = () => {
+    if (editingMessage) return;
     setShowAttachMenu(false);
     setShowGifPicker(true);
     setSheetTranslateY(0);
@@ -204,6 +234,40 @@ const MessageInput = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+
+    if (editingMessage) {
+      const nextText = text.trim();
+
+      if (!nextText) {
+        toast.error("Message cannot be empty");
+        return;
+      }
+
+      if (nextText === (editingMessage.text || "").trim()) {
+        clearEditingMessage();
+        setText("");
+        return;
+      }
+
+      setIsSending(true);
+      try {
+        await editMessage(editingMessage._id, nextText);
+        setText("");
+        clearEditingMessage();
+
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "0px";
+          textareaRef.current.style.height = "42px";
+        }
+
+        textareaRef.current?.focus();
+      } catch (error) {
+        console.error("Failed to edit message:", error);
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
 
     if (!text.trim() && !imagePreview && !gifPreview) return;
     if (isSending) return;
@@ -245,10 +309,7 @@ const MessageInput = () => {
   const handleSheetTouchMove = (e) => {
     if (!isMobile || dragStartYRef.current === null) return;
     const deltaY = e.touches[0].clientY - dragStartYRef.current;
-
-    if (deltaY > 0) {
-      setSheetTranslateY(deltaY);
-    }
+    if (deltaY > 0) setSheetTranslateY(deltaY);
   };
 
   const handleSheetTouchEnd = () => {
@@ -272,7 +333,9 @@ const MessageInput = () => {
   };
 
   const isMyReply = replyTo?.senderName === authUser?.fullName;
-  const canSend = Boolean(text.trim() || imagePreview || gifPreview);
+  const canSend = editingMessage
+    ? Boolean(text.trim())
+    : Boolean(text.trim() || imagePreview || gifPreview);
 
   return (
     <div
@@ -285,7 +348,6 @@ const MessageInput = () => {
       {showGifPicker && isMobile && (
         <>
           <div className="fixed inset-0 z-30 bg-black/20" onClick={closeAllPopups} />
-
           <div
             ref={gifSheetRef}
             onTouchStart={handleSheetTouchStart}
@@ -463,7 +525,35 @@ const MessageInput = () => {
         </div>
       )}
 
-      {replyTo && (
+      {editingMessage && (
+        <div className="mb-2.5 flex items-start gap-2 rounded-2xl border border-warning/30 bg-warning/10 px-2.5 py-2.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning">
+            <Pencil className="h-3.5 w-3.5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-semibold text-warning">
+              Editing message
+            </p>
+            <p className="truncate text-[12px] text-base-content/65">
+              Update your text and send
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              clearEditingMessage();
+              setText("");
+            }}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base-content/55 transition-colors hover:bg-base-300 hover:text-base-content"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {!editingMessage && replyTo && (
         <div className="mb-2.5 flex items-start gap-2 rounded-2xl border border-base-300 bg-base-200/70 px-2.5 py-2.5">
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <CornerUpLeft className="h-3.5 w-3.5" />
@@ -511,7 +601,7 @@ const MessageInput = () => {
         </div>
       )}
 
-      {imagePreview && (
+      {imagePreview && !editingMessage && (
         <div className="relative mb-2.5 inline-flex">
           <img
             src={imagePreview}
@@ -528,7 +618,7 @@ const MessageInput = () => {
         </div>
       )}
 
-      {gifPreview && (
+      {gifPreview && !editingMessage && (
         <div className="relative mb-2.5 inline-flex">
           <img
             src={gifPreview}
@@ -554,55 +644,57 @@ const MessageInput = () => {
           onChange={handleImageChange}
         />
 
-        <div ref={attachWrapRef} className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setShowAttachMenu((prev) => !prev);
-              if (showGifPicker) setShowGifPicker(false);
-            }}
-            className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-base-300 bg-base-100 transition-all duration-200 hover:bg-base-200 sm:h-11 sm:w-11 ${
-              showAttachMenu ? "rotate-45 text-primary" : "text-base-content/70"
-            }`}
-          >
-            <Plus className="h-5 w-5" />
-          </button>
+        {!editingMessage && (
+          <div ref={attachWrapRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAttachMenu((prev) => !prev);
+                if (showGifPicker) setShowGifPicker(false);
+              }}
+              className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-base-300 bg-base-100 transition-all duration-200 hover:bg-base-200 sm:h-11 sm:w-11 ${
+                showAttachMenu ? "rotate-45 text-primary" : "text-base-content/70"
+              }`}
+            >
+              <Plus className="h-5 w-5" />
+            </button>
 
-          {showAttachMenu && !showGifPicker && (
-            <div className="absolute bottom-full left-0 z-20 mb-2 w-44 rounded-3xl border border-base-300 bg-base-100 p-2 shadow-xl">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAttachMenu(false);
-                  fileInputRef.current?.click();
-                }}
-                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-base-200 text-base-content/75">
-                  <Image className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-base-content">Photo</p>
-                  <p className="text-[11px] text-base-content/50">Upload image</p>
-                </div>
-              </button>
+            {showAttachMenu && !showGifPicker && (
+              <div className="absolute bottom-full left-0 z-20 mb-2 w-44 rounded-3xl border border-base-300 bg-base-100 p-2 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-base-200 text-base-content/75">
+                    <Image className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-base-content">Photo</p>
+                    <p className="text-[11px] text-base-content/50">Upload image</p>
+                  </div>
+                </button>
 
-              <button
-                type="button"
-                onClick={openGifPicker}
-                className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Gift className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-base-content">GIF</p>
-                  <p className="text-[11px] text-base-content/50">Search Giphy</p>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  type="button"
+                  onClick={openGifPicker}
+                  className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-base-200"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <Gift className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-base-content">GIF</p>
+                    <p className="text-[11px] text-base-content/50">Search Giphy</p>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex min-h-[44px] flex-1 items-end rounded-2xl border border-base-300 bg-base-100 px-3 py-2">
           <textarea
@@ -611,7 +703,13 @@ const MessageInput = () => {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={replyTo ? "Reply..." : "Type a message..."}
+            placeholder={
+              editingMessage
+                ? "Edit message..."
+                : replyTo
+                ? "Reply..."
+                : "Type a message..."
+            }
             className="max-h-[140px] min-h-[24px] w-full resize-none bg-transparent text-[14px] leading-5 outline-none placeholder:text-base-content/40"
             style={{ overflowY: text.length > 0 ? "auto" : "hidden" }}
           />
