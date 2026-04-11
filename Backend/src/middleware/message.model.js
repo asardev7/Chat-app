@@ -17,6 +17,7 @@ const messageSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+      default: "",
     },
     gifUrl: {
       type: String,
@@ -30,6 +31,7 @@ const messageSchema = new mongoose.Schema(
       messageId: { type: String, default: null },
       text: { type: String, default: null },
       image: { type: String, default: null },
+      gifUrl: { type: String, default: null },
       senderName: { type: String, default: null },
     },
   },
