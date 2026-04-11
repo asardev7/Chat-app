@@ -6,7 +6,10 @@ import { getReceiverSocketId, io } from "../lib/socket.io.js";
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    const filteredUsers = await User.find({
+      _id: { $ne: loggedInUserId },
+    }).select("-password");
+
     res.json(filteredUsers);
   } catch (error) {
     console.error("Error in getUsersForSidebar:", error.message);
@@ -35,11 +38,11 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image, replyTo } = req.body;
+    const { text, image, gifUrl, replyTo } = req.body;
     const { id: receiverid } = req.params;
     const senderid = req.user._id;
 
-    let imageUrl;
+    let imageUrl = "";
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
       imageUrl = uploadResponse.secure_url;
@@ -48,9 +51,18 @@ export const sendMessage = async (req, res) => {
     const newMessage = new Message({
       senderid,
       receiverid,
-      text,
-      image: imageUrl,
-      replyTo: replyTo || null,
+      text: text || "",
+      image: imageUrl || "",
+      gifUrl: gifUrl || "",
+      replyTo: replyTo
+        ? {
+            messageId: replyTo.messageId || null,
+            text: replyTo.text || null,
+            image: replyTo.image || null,
+            gifUrl: replyTo.gifUrl || null,
+            senderName: replyTo.senderName || null,
+          }
+        : null,
     });
 
     await newMessage.save();
