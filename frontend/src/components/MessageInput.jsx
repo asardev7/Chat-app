@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { Image, Send, X, Reply } from "lucide-react";
@@ -8,12 +8,33 @@ const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const inputRef = useRef(null);
 
   const { sendMessage, replyTo, clearReplyTo } = useChatStore();
   const { authUser } = useAuthStore();
+
+  useEffect(() => {
+    const updateKeyboardState = () => {
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const fullHeight = window.innerHeight;
+      setKeyboardOpen(fullHeight - viewportHeight > 120);
+    };
+
+    updateKeyboardState();
+
+    window.visualViewport?.addEventListener("resize", updateKeyboardState);
+    window.visualViewport?.addEventListener("scroll", updateKeyboardState);
+    window.addEventListener("resize", updateKeyboardState);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateKeyboardState);
+      window.visualViewport?.removeEventListener("scroll", updateKeyboardState);
+      window.removeEventListener("resize", updateKeyboardState);
+    };
+  }, []);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -25,7 +46,9 @@ const MessageInput = () => {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -36,16 +59,23 @@ const MessageInput = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+
     if (!text.trim() && !imagePreview) return;
     if (isSending) return;
 
     setIsSending(true);
+
     try {
-      await sendMessage({ text: text.trim(), image: imagePreview });
+      await sendMessage({
+        text: text.trim(),
+        image: imagePreview,
+      });
+
       setText("");
       setImagePreview(null);
+
       if (fileInputRef.current) fileInputRef.current.value = "";
-      inputRef.current?.blur();
+      inputRef.current?.focus();
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {
@@ -56,23 +86,28 @@ const MessageInput = () => {
   const isMyReply = replyTo?.senderName === authUser?.fullName;
 
   return (
-    <div className="px-3 sm:px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-
+    <div
+      className={`px-3 sm:px-4 pt-2 ${
+        keyboardOpen ? "pb-2" : "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      }`}
+    >
       {replyTo && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl bg-base-200 border-l-4 border-primary px-3 py-2">
-          <Reply className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+        <div className="mb-2 flex items-start gap-2 rounded-2xl border border-base-300 bg-base-200/70 px-3 py-2">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Reply className="h-4 w-4" />
+          </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold text-primary truncate">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-semibold text-primary">
               {isMyReply ? "You" : replyTo.senderName}
             </p>
 
             {replyTo.image && !replyTo.text && (
-              <p className="text-[12px] text-base-content/60 truncate">📷 Photo</p>
+              <p className="truncate text-[12px] text-base-content/60">📷 Photo</p>
             )}
 
             {replyTo.text && (
-              <p className="text-[12px] text-base-content/60 truncate">{replyTo.text}</p>
+              <p className="truncate text-[12px] text-base-content/60">{replyTo.text}</p>
             )}
           </div>
 
@@ -80,33 +115,33 @@ const MessageInput = () => {
             <img
               src={replyTo.image}
               alt="reply preview"
-              className="w-10 h-10 rounded-lg object-cover shrink-0"
+              className="h-10 w-10 shrink-0 rounded-xl object-cover"
             />
           )}
 
           <button
             type="button"
             onClick={clearReplyTo}
-            className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center hover:bg-base-300 transition-colors"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-base-300 transition-colors"
           >
-            <X className="w-3.5 h-3.5 text-base-content/60" />
+            <X className="h-4 w-4 text-base-content/60" />
           </button>
         </div>
       )}
 
       {imagePreview && (
-        <div className="mb-2 inline-flex relative">
+        <div className="relative mb-2 inline-flex">
           <img
             src={imagePreview}
             alt="Preview"
-            className="w-20 h-20 object-cover rounded-2xl border border-base-300"
+            className="h-20 w-20 rounded-2xl border border-base-300 object-cover"
           />
           <button
             type="button"
             onClick={removeImage}
-            className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-base-100 border border-base-300 flex items-center justify-center shadow-sm hover:bg-base-200 transition-colors"
+            className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-base-300 bg-base-100 shadow-sm transition-colors hover:bg-base-200"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -123,16 +158,16 @@ const MessageInput = () => {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-11 h-11 shrink-0 rounded-2xl border border-base-300 bg-base-100 hover:bg-base-200 flex items-center justify-center transition-colors"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-base-300 bg-base-100 transition-colors hover:bg-base-200"
         >
-          <Image className="w-5 h-5 text-base-content/70" />
+          <Image className="h-5 w-5 text-base-content/70" />
         </button>
 
-        <div className="flex-1 rounded-2xl border border-base-300 bg-base-100 px-4 min-h-[44px] flex items-center">
+        <div className="flex min-h-[44px] flex-1 items-center rounded-2xl border border-base-300 bg-base-100 px-4">
           <input
             ref={inputRef}
             type="text"
-            className="w-full h-11 bg-transparent outline-none text-sm placeholder:text-base-content/40"
+            className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-base-content/40"
             placeholder={replyTo ? "Reply..." : "Type a message..."}
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -142,9 +177,9 @@ const MessageInput = () => {
         <button
           type="submit"
           disabled={(!text.trim() && !imagePreview) || isSending}
-          className="w-11 h-11 shrink-0 rounded-2xl bg-primary text-primary-content flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-content transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Send className="w-5 h-5" />
+          <Send className="h-5 w-5" />
         </button>
       </form>
     </div>
