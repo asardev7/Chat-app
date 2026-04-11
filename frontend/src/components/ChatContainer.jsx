@@ -201,6 +201,7 @@ const ChatContainer = () => {
   const { authUser } = useAuthStore();
 
   const messageEndRef = useRef(null);
+  const scrollAreaRef = useRef(null);
   const messageRefs = useRef({});
   const highlightTimeouts = useRef({});
   const [activeHighlightId, setActiveHighlightId] = useState(null);
@@ -224,12 +225,14 @@ const ChatContainer = () => {
   }, [selectedUser, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({
+    const timer = setTimeout(() => {
+      messageEndRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "end",
       });
-    }
+    }, 80);
+
+    return () => clearTimeout(timer);
   }, [messages]);
 
   useEffect(() => {
@@ -262,22 +265,6 @@ const ChatContainer = () => {
   };
 
   const closeActions = () => setActionMessage(null);
-
-  const handleEdit = () => {
-    if (!actionMessage) return;
-
-    if (actionMessage.image || actionMessage.gifUrl || actionMessage.isEdited) {
-      closeActions();
-      return;
-    }
-
-    setEditingMessage({
-      _id: actionMessage._id,
-      text: actionMessage.text || "",
-    });
-
-    closeActions();
-  };
 
   const handleDelete = async () => {
     if (!actionMessage) return;
@@ -323,7 +310,10 @@ const ChatContainer = () => {
     <div className="flex h-full min-h-0 flex-1 flex-col bg-base-200">
       <ChatHeader />
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:px-3 md:px-4">
+      <div
+        ref={scrollAreaRef}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:px-3 md:px-4"
+      >
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div>
@@ -336,7 +326,7 @@ const ChatContainer = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-1.5 pb-2">
+          <div className="space-y-1.5 pb-24 sm:pb-28">
             {messages.map((message, index) => {
               const isMine =
                 (message.senderid?._id || message.senderid)?.toString() ===
@@ -481,7 +471,11 @@ const ChatContainer = () => {
                             )}
 
                             {message.text && (
-                              <div className={message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"}>
+                              <div
+                                className={
+                                  message.image || message.gifUrl ? "px-2.5 py-2" : "px-2.5 py-1.5"
+                                }
+                              >
                                 <p className="break-words whitespace-pre-wrap text-[14px] leading-[1.32] sm:text-[14.5px]">
                                   {linkifyText(message.text)}
                                 </p>
@@ -531,7 +525,7 @@ const ChatContainer = () => {
               );
             })}
 
-            <div ref={messageEndRef} />
+            <div ref={messageEndRef} className="h-6 sm:h-8" />
           </div>
         )}
       </div>
@@ -561,7 +555,12 @@ const ChatContainer = () => {
                   actionMessage.isEdited ||
                   actionMessage.deletedForEveryone
                 }
-                onClick={handleEdit}
+                onClick={() =>
+                  setEditingMessage({
+                    _id: actionMessage._id,
+                    text: actionMessage.text || "",
+                  })
+                }
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 bg-base-200 hover:bg-base-300 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Pencil className="h-4.5 w-4.5" />
