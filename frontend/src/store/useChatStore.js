@@ -11,6 +11,7 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false,
   replyTo: null,
   editingMessage: null,
+  unreadCounts: {},
 
   getUsers: async () => {
     set({ isUsersLoading: true });
@@ -28,7 +29,13 @@ export const useChatStore = create((set, get) => ({
     set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
-      set({ messages: res.data });
+      set((state) => ({
+        messages: res.data,
+        unreadCounts: {
+          ...state.unreadCounts,
+          [userId]: 0,
+        },
+      }));
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to load messages");
     } finally {
@@ -118,23 +125,31 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("newMessage", (newMessage) => {
       const { selectedUser } = get();
-      if (!selectedUser) return;
-
+      const authId = useAuthStore.getState().authUser?._id?.toString();
       const senderId = (newMessage.senderid?._id || newMessage.senderid)?.toString();
       const receiverId = (newMessage.receiverid?._id || newMessage.receiverid)?.toString();
-      const selectedId = selectedUser._id?.toString();
-      const authId = useAuthStore.getState().authUser?._id?.toString();
+      const selectedId = selectedUser?._id?.toString();
 
       const isRelevantIncoming = senderId === selectedId && receiverId === authId;
       const isRelevantOutgoing = senderId === authId && receiverId === selectedId;
+      const isActiveChatIncoming = senderId === selectedId && receiverId === authId;
 
-      if (!isRelevantIncoming && !isRelevantOutgoing) return;
+      if (isRelevantIncoming || isRelevantOutgoing) {
+        set((state) => {
+          const exists = state.messages.some((msg) => msg._id === newMessage._id);
+          if (exists) return state;
+          return { messages: [...state.messages, newMessage] };
+        });
+      }
 
-      set((state) => {
-        const exists = state.messages.some((msg) => msg._id === newMessage._id);
-        if (exists) return state;
-        return { messages: [...state.messages, newMessage] };
-      });
+      if (senderId !== authId && !isActiveChatIncoming) {
+        set((state) => ({
+          unreadCounts: {
+            ...state.unreadCounts,
+            [senderId]: (state.unreadCounts[senderId] || 0) + 1,
+          },
+        }));
+      }
     });
 
     socket.on("messageUpdated", (updatedMessage) => {
@@ -183,10 +198,22 @@ export const useChatStore = create((set, get) => ({
 
   clearEditingMessage: () => set({ editingMessage: null }),
 
+  clearUnreadForUser: (userId) =>
+    set((state) => ({
+      unreadCounts: {
+        ...state.unreadCounts,
+        [userId]: 0,
+      },
+    })),
+
   setSelectedUser: (selectedUser) =>
-    set({
+    set((state) => ({
       selectedUser,
       replyTo: null,
       editingMessage: null,
-    }),
+      unreadCounts: {
+        ...state.unreadCounts,
+        [selectedUser?._id]: 0,
+      },
+    })),
 }));
