@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { MessageSquare, Settings, User, LogOut as LogOutIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
@@ -6,8 +6,18 @@ import { useChatStore } from "../store/useChatStore";
 const Navbar = () => {
   const { authUser, logout } = useAuthStore();
   const { selectedUser } = useChatStore();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (selectedUser) return null;
+
+  const handleToggle = (path) => {
+    if (location.pathname === path) {
+      navigate("/");
+    } else {
+      navigate(path);
+    }
+  };
 
   return (
     <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-40 h-16">
@@ -22,14 +32,26 @@ const Navbar = () => {
 
         {authUser && (
           <div className="flex items-center gap-1">
-            <Link to="/settings" className="btn btn-ghost btn-sm gap-1.5">
+            <button
+              onClick={() => handleToggle("/settings")}
+              className={`btn btn-ghost btn-sm gap-1.5 ${
+                location.pathname === "/settings" ? "btn-active" : ""
+              }`}
+            >
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">Settings</span>
-            </Link>
-            <Link to="/profile" className="btn btn-ghost btn-sm gap-1.5">
+            </button>
+
+            <button
+              onClick={() => handleToggle("/profile")}
+              className={`btn btn-ghost btn-sm gap-1.5 ${
+                location.pathname === "/profile" ? "btn-active" : ""
+              }`}
+            >
               <User className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">Profile</span>
-            </Link>
+            </button>
+
             <button onClick={logout} className="btn btn-ghost btn-sm gap-1.5">
               <LogOutIcon className="w-4 h-4" />
               <span className="hidden sm:inline text-sm">Logout</span>
