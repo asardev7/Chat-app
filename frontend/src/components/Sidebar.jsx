@@ -45,13 +45,13 @@ const Sidebar = () => {
             />
             <span>Show online only</span>
           </label>
-          <span className="text-xs text-zinc-500">({onlineUsers.length - 1} online)</span>
+          <span className="text-xs text-zinc-500">({Math.max(onlineUsers.length - 1, 0)} online)</span>
         </div>
       </div>
 
       <div className="overflow-y-auto w-full py-3">
         {filteredUsers.map((user) => {
-          const unread = unreadCounts?.[user._id] || 0;
+          const unread = unreadCounts?.[user._id] || 0; 
           const isSelected = selectedUser?._id === user._id;
           const isOnline = onlineUsers.includes(user._id);
 
@@ -66,18 +66,16 @@ const Sidebar = () => {
               <div className="relative mx-auto lg:mx-0">
                 <img
                   src={user.profilePic || "/avatar.png"}
-                  alt={user.name}
+                  alt={user.fullName || user.name} 
                   className="size-12 object-cover rounded-full"
                 />
                 {isOnline && (
-                  <span
-                    className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900"
-                  />
+                  <span className="absolute bottom-0 right-0 size-3 bg-green-500 rounded-full ring-2 ring-zinc-900" />
                 )}
               </div>
 
               <div className="hidden lg:block text-left min-w-0 flex-1">
-                <div className="font-medium truncate">{user.fullName}</div>
+                <div className="font-medium truncate">{user.fullName || user.name}</div>
                 <div className="text-sm text-zinc-400">
                   {isOnline ? "Online" : "Offline"}
                 </div>
