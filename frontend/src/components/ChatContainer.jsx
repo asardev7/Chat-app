@@ -132,6 +132,59 @@ const SwipeableMessage = ({ children, onSwipe, disabled }) => {
   );
 };
 
+const DesktopMessageActions = ({
+  isMine,
+  canEdit,
+  message,
+  handleReply,
+  openActions,
+  setEditingMessage,
+}) => {
+  return (
+    <div
+      className={`pointer-events-none absolute top-1/2 z-20 hidden -translate-y-1/2 items-center gap-1 rounded-2xl border border-base-300 bg-base-100/95 p-1 shadow-lg backdrop-blur-sm opacity-0 transition-all duration-200 group-hover:pointer-events-auto group-hover:opacity-100 lg:flex ${
+        isMine ? "right-[calc(100%+8px)]" : "left-[calc(100%+8px)]"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => handleReply(message, isMine)}
+        className="flex h-8 w-8 items-center justify-center rounded-xl text-base-content/70 transition-colors hover:bg-base-200 hover:text-primary"
+        title="Reply"
+      >
+        <CornerUpLeft className="h-4 w-4" />
+      </button>
+
+      {isMine && canEdit && (
+        <button
+          type="button"
+          onClick={() =>
+            setEditingMessage({
+              _id: message._id,
+              text: message.text || "",
+            })
+          }
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-base-content/70 transition-colors hover:bg-base-200 hover:text-primary"
+          title="Edit"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
+
+      {isMine && (
+        <button
+          type="button"
+          onClick={() => openActions(message, isMine)}
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-base-content/70 transition-colors hover:bg-red-50 hover:text-red-500"
+          title="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const ChatContainer = () => {
   const {
     messages,
@@ -168,7 +221,7 @@ const ChatContainer = () => {
     subscribeToMessages();
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser]);
+  }, [selectedUser, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (messageEndRef.current) {
@@ -340,47 +393,14 @@ const ChatContainer = () => {
                     }`}
                   >
                     {isDesktop && !message.deletedForEveryone && (
-                      <div
-                        className={`absolute top-1 z-20 flex items-center gap-1 rounded-full border border-base-300 bg-base-100/95 px-1.5 py-1 shadow-md backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:pointer-events-auto ${
-                          isMine ? "-left-28" : "-right-28"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleReply(message, isMine)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 hover:bg-base-200 hover:text-primary"
-                          title="Reply"
-                        >
-                          <CornerUpLeft className="h-4 w-4" />
-                        </button>
-
-                        {isMine && canEdit && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingMessage({
-                                _id: message._id,
-                                text: message.text || "",
-                              });
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 hover:bg-base-200 hover:text-primary"
-                            title="Edit"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                        )}
-
-                        {isMine && (
-                          <button
-                            type="button"
-                            onClick={() => openActions(message, isMine)}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-base-content/70 hover:bg-red-50 hover:text-red-500"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
+                      <DesktopMessageActions
+                        isMine={isMine}
+                        canEdit={canEdit}
+                        message={message}
+                        handleReply={handleReply}
+                        openActions={openActions}
+                        setEditingMessage={setEditingMessage}
+                      />
                     )}
 
                     <button
