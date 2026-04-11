@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    gifUrl: {
+  type: String,
+  default: "",
+  },
   },
   { timestamps: true },
 );
