@@ -15,7 +15,7 @@ const linkifyText = (text) => {
 
   return parts.map((part, index) => {
     if (!part) return null;
-
+    
     const isUrl = /^(https?:\/\/|www\.)/i.test(part);
 
     if (isUrl) {
@@ -26,7 +26,7 @@ const linkifyText = (text) => {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline underline-offset-2 break-all font-medium"
+          className="underline underline-offset-2 break-all font-medium opacity-95"
         >
           {part}
         </a>
@@ -36,7 +36,7 @@ const linkifyText = (text) => {
     return <span key={index}>{part}</span>;
   });
 };
-
+  
 const ChatContainer = () => {
   const {
     messages,
