@@ -21,66 +21,92 @@ const Sidebar = () => {
 
   return (
     <aside className="h-full w-full flex flex-col bg-base-100 border-r border-base-300 overflow-hidden">
-      
-      <div className="px-4 py-4 border-b border-base-300">
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-base">Contacts</span>
-          <span className="ml-auto text-xs text-zinc-500">
-            {onlineUsers.length - 1} online
-          </span>
+      <div className="shrink-0 px-4 py-4 border-b border-base-300 bg-base-100">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-semibold text-base">Contacts</h2>
+              <p className="text-xs text-base-content/50">
+                {onlineUsers.filter((id) => users.some((u) => u._id === id)).length} online
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Online filter toggle */}
-        <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
-          <div
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-base-200/70 px-3 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Show online only</p>
+            <p className="text-xs text-base-content/50">Filter active contacts</p>
+          </div>
+
+          <button
+            type="button"
             onClick={() => setShowOnlineOnly(!showOnlineOnly)}
-            className={`w-10 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 ${
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
               showOnlineOnly ? "bg-primary" : "bg-base-300"
             }`}
           >
-            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
-              showOnlineOnly ? "translate-x-5" : "translate-x-0"
-            }`} />
-          </div>
-          <span className="text-xs text-zinc-500">Show online only</span>
-        </label>
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                showOnlineOnly ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
-      {/* Contact list */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {filteredUsers.map((user) => (
-          <button
-            key={user._id}
-            onClick={() => setSelectedUser(user)}
-            className={`
-              w-full flex items-center gap-3 px-4 py-3
-              hover:bg-base-200 transition-colors
-              ${selectedUser?._id === user._id ? "bg-base-200 ring-1 ring-inset ring-base-300" : ""}
-            `}
-          >
-            <div className="relative flex-shrink-0">
-              <img
-                src={user.profilePic || "/avatar.png"}
-                alt={user.fullName}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-              {onlineUsers.includes(user._id) && (
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-base-100" />
-              )}
-            </div>
-            <div className="text-left min-w-0">
-              <p className="font-medium text-sm truncate">{user.fullName}</p>
-              <p className="text-xs text-zinc-500">
-                {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+      <div className="flex-1 overflow-y-auto">
+        {filteredUsers.length > 0 ? (
+          <div className="p-2">
+            {filteredUsers.map((user) => {
+              const isOnline = onlineUsers.includes(user._id);
+              const isSelected = selectedUser?._id === user._id;
+
+              return (
+                <button
+                  key={user._id}
+                  onClick={() => setSelectedUser(user)}
+                  className={`w-full flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all mb-1
+                    ${
+                      isSelected
+                        ? "bg-primary/10 border border-primary/20"
+                        : "hover:bg-base-200 border border-transparent"
+                    }`}
+                >
+                  <div className="relative shrink-0">
+                    <img
+                      src={user.profilePic || "/avatar.png"}
+                      alt={user.fullName}
+                      className="w-12 h-12 rounded-full object-cover border border-base-300"
+                    />
+                    <span
+                      className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-base-100 ${
+                        isOnline ? "bg-green-500" : "bg-base-300"
+                      }`}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{user.fullName}</p>
+                    <p className={`text-sm ${isOnline ? "text-green-500" : "text-base-content/50"}`}>
+                      {isOnline ? "Online" : "Offline"}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center px-6 text-center">
+            <div>
+              <p className="font-medium text-base-content/70">No contacts found</p>
+              <p className="text-sm text-base-content/50 mt-1">
+                Try turning off the online-only filter
               </p>
             </div>
-          </button>
-        ))}
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-10 text-zinc-500 text-sm">
-            No online users
           </div>
         )}
       </div>
