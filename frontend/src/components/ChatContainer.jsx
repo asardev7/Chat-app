@@ -39,7 +39,7 @@ const ChatContainer = () => {
     <div className="flex-1 flex flex-col min-h-0">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-zinc-500 text-sm">No messages yet. Start the conversation!</p>
@@ -51,47 +51,49 @@ const ChatContainer = () => {
           return (
             <div
               key={message._id}
-              className={`flex items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}
+              className={`chat ${isMine ? "chat-end" : "chat-start"}`}
             >
+              
+              <div className="chat-image avatar">
+                <div className="w-9 rounded-full border border-base-300">
+                  <img
+                    src={
+                      isMine
+                        ? authUser.profilePic || "/avatar.png"
+                        : selectedUser.profilePic || "/avatar.png"
+                    }
+                    alt="avatar"
+                  />
+                </div>
+              </div>
 
-              <img
-                src={isMine
-                  ? authUser.profilePic || "/avatar.png"
-                  : selectedUser.profilePic || "/avatar.png"
-                }
-                alt="avatar"
-                className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-1"
-              />
+              <div className="chat-header mb-1">
+                <time className="text-xs opacity-50 ml-1">
+                  {formatMessageTime(message.createdAt)}
+                </time>
+              </div>
 
-
-              <div className={`max-w-[70%] md:max-w-[60%] flex flex-col gap-1 ${isMine ? "items-end" : "items-start"}`}>
+              <div className={`chat-bubble flex flex-col gap-2 max-w-[75%] md:max-w-[60%] ${
+                isMine ? "chat-bubble-primary" : ""
+              }`}>
                 {message.image && (
                   <img
                     src={message.image}
                     alt="attachment"
-                    className="rounded-xl max-w-full max-h-60 object-cover border border-base-300"
+                    className="rounded-lg max-w-full max-h-60 object-cover"
                   />
                 )}
                 {message.text && (
-                  <div className={`
-                    px-3 py-2 rounded-2xl text-sm leading-relaxed break-words
-                    ${isMine
-                      ? "bg-primary text-primary-content rounded-br-sm"
-                      : "bg-base-200 text-base-content rounded-bl-sm"
-                    }
-                  `}>
-                    {message.text}
-                  </div>
+                  <p className="text-sm leading-relaxed break-words">{message.text}</p>
                 )}
-                <span className="text-[10px] text-zinc-400 px-1">
-                  {formatMessageTime(message.createdAt)}
-                </span>
               </div>
             </div>
           );
         })}
+
         <div ref={messageEndRef} />
       </div>
+
       <MessageInput />
     </div>
   );
