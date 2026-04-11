@@ -46,6 +46,7 @@ export const useChatStore = create((set, get) => ({
               messageId: replyTo._id,
               text: replyTo.text || null,
               image: replyTo.image || null,
+              gifUrl: replyTo.gifUrl || null,
               senderName: replyTo.senderName || "Unknown",
             }
           : null,
