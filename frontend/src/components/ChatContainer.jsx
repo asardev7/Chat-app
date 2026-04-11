@@ -1,11 +1,11 @@
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { Check, CheckCheck } from "lucide-react";
+import { Check, CheckCheck, Reply } from "lucide-react";
 
 const linkifyText = (text) => {
   if (!text) return null;
@@ -37,6 +37,82 @@ const linkifyText = (text) => {
   });
 };
 
+const SWIPE_THRESHOLD = 60;
+
+const SwipeableMessage = ({ children, onSwipe }) => {
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const [swipeX, setSwipeX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const [triggered, setTriggered] = useState(false);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    setSwiping(true);
+    setTriggered(false);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStartX.current) return;
+
+    const deltaX = e.touches[0].clientX - touchStartX.current;
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
+
+    if (deltaY > 20) {
+      setSwipeX(0);
+      return;
+    }
+
+    if (deltaX > 0 && deltaX <= SWIPE_THRESHOLD + 20) {
+      setSwipeX(deltaX);
+      if (deltaX >= SWIPE_THRESHOLD && !triggered) {
+        setTriggered(true);
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (triggered) onSwipe();
+    setSwipeX(0);
+    setSwiping(false);
+    setTriggered(false);
+    touchStartX.current = null;
+  };
+
+  return (
+    <div
+      className="relative w-full"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div
+        className={`transition-transform ${swiping ? "" : "duration-200"}`}
+        style={{ transform: `translateX(${swipeX}px)` }}
+      >
+        {children}
+      </div>
+
+      {swipeX > 10 && (
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center"
+          style={{ opacity: Math.min(swipeX / SWIPE_THRESHOLD, 1) }}
+        >
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              triggered ? "bg-primary text-primary-content scale-110" : "bg-base-300"
+            } transition-all`}
+          >
+            <Reply className="w-4 h-4" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ChatContainer = () => {
   const {
     messages,
@@ -45,6 +121,7 @@ const ChatContainer = () => {
     selectedUser,
     subscribeToMessages,
     unsubscribeFromMessages,
+    setReplyTo,
   } = useChatStore();
 
   const { authUser } = useAuthStore();
@@ -64,6 +141,15 @@ const ChatContainer = () => {
       messageEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages]);
+
+  const handleReply = (message, isMine) => {
+    setReplyTo({
+      _id: message._id,
+      text: message.text || null,
+      image: message.image || null,
+      senderName: isMine ? authUser.fullName : selectedUser.fullName,
+    });
+  };
 
   if (isMessagesLoading) {
     return (
@@ -93,9 +179,7 @@ const ChatContainer = () => {
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-center px-6">
             <div>
-              <p className="text-base font-medium text-base-content/70">
-                No messages yet
-              </p>
+              <p className="text-base font-medium text-base-content/70">No messages yet</p>
               <p className="text-sm text-base-content/50 mt-1">
                 Start the conversation with {selectedUser?.fullName?.split(" ")[0]}
               </p>
@@ -114,6 +198,9 @@ const ChatContainer = () => {
                 (previousMessage.senderid?._id || previousMessage.senderid)?.toString() ===
                   (message.senderid?._id || message.senderid)?.toString();
 
+              const hasReply =
+                message.replyTo && message.replyTo.messageId;
+
               return (
                 <div
                   key={message._id}
@@ -127,15 +214,13 @@ const ChatContainer = () => {
                     }`}
                   >
                     <div className="shrink-0 self-end">
-                      {!isMine && !previousIsSameSender ? (
+                      {!previousIsSameSender ? (
                         <img
-                          src={selectedUser.profilePic || "/avatar.png"}
-                          alt="avatar"
-                          className="w-8 h-8 rounded-full object-cover border border-base-300"
-                        />
-                      ) : isMine && !previousIsSameSender ? (
-                        <img
-                          src={authUser.profilePic || "/avatar.png"}
+                          src={
+                            isMine
+                              ? authUser.profilePic || "/avatar.png"
+                              : selectedUser.profilePic || "/avatar.png"
+                          }
                           alt="avatar"
                           className="w-8 h-8 rounded-full object-cover border border-base-300"
                         />
@@ -144,30 +229,78 @@ const ChatContainer = () => {
                       )}
                     </div>
 
-                    <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
-                      <div
-                        className={`rounded-2xl shadow-sm ${
-                          isMine
-                            ? "bg-primary text-primary-content rounded-br-md"
-                            : "bg-base-100 text-base-content rounded-bl-md border border-base-300/40"
-                        }`}
-                      >
-                        {message.image && (
-                          <img
-                            src={message.image}
-                            alt="attachment"
-                            className="rounded-t-2xl max-w-full max-h-72 object-cover"
-                          />
-                        )}
+                    <div className={`flex flex-col ${isMine ? "items-end" : "items-start"} w-full`}>
+                      <SwipeableMessage onSwipe={() => handleReply(message, isMine)}>
+                        <div
+                          className={`rounded-2xl shadow-sm overflow-hidden ${
+                            isMine
+                              ? "bg-primary text-primary-content rounded-br-md"
+                              : "bg-base-100 text-base-content rounded-bl-md border border-base-300/40"
+                          }`}
+                        >
+                          {hasReply && (
+                            <div
+                              className={`mx-2 mt-2 rounded-xl px-3 py-2 text-[11px] border-l-4 ${
+                                isMine
+                                  ? "bg-primary-content/15 border-primary-content/50 text-primary-content/80"
+                                  : "bg-base-200 border-primary text-base-content/70"
+                              }`}
+                            >
+                              <p className="font-semibold text-[10px] mb-0.5 truncate">
+                                {message.replyTo.senderName === authUser.fullName
+                                  ? "You"
+                                  : message.replyTo.senderName}
+                              </p>
 
-                        {message.text && (
-                          <div className={`${message.image ? "px-3 py-2.5" : "px-3 py-2"}`}>
-                            <p className="text-[14px] sm:text-[14.5px] leading-[1.38] break-words whitespace-pre-wrap">
-                              {linkifyText(message.text)}
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                              {message.replyTo.image && !message.replyTo.text && (
+                                <div className="flex items-center gap-1">
+                                  <img
+                                    src={message.replyTo.image}
+                                    alt="reply"
+                                    className="w-8 h-8 rounded object-cover"
+                                  />
+                                  <span className="truncate">📷 Photo</span>
+                                </div>
+                              )}
+
+                              {message.replyTo.text && (
+                                <p className="truncate">{message.replyTo.text}</p>
+                              )}
+
+                              {message.replyTo.image && message.replyTo.text && (
+                                <div className="flex items-center gap-1">
+                                  <img
+                                    src={message.replyTo.image}
+                                    alt="reply"
+                                    className="w-6 h-6 rounded object-cover shrink-0"
+                                  />
+                                  <p className="truncate">{message.replyTo.text}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {message.image && (
+                            <img
+                              src={message.image}
+                              alt="attachment"
+                              className={`max-w-full max-h-72 object-cover ${
+                                hasReply ? "mt-2 rounded-t-none" : ""
+                              }`}
+                            />
+                          )}
+
+                          {message.text && (
+                            <div className={`${message.image ? "px-3 py-2.5" : "px-3 py-2"}`}>
+                              <p className="text-[14px] sm:text-[14.5px] leading-[1.38] break-words whitespace-pre-wrap">
+                                {linkifyText(message.text)}
+                              </p>
+                            </div>
+                          )}
+
+                          {!message.text && hasReply && <div className="pb-2" />}
+                        </div>
+                      </SwipeableMessage>
 
                       <div
                         className={`mt-0.5 px-1 flex items-center gap-1 text-[8px] sm:text-[9px] ${
