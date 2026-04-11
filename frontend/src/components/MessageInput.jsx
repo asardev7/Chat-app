@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { Image, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -7,8 +7,31 @@ const MessageInput = () => {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
   const fileInputRef = useRef(null);
+  const inputRef = useRef(null);
   const { sendMessage } = useChatStore();
+
+  useEffect(() => {
+    const updateKeyboardState = () => {
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const fullHeight = window.innerHeight;
+      setKeyboardOpen(fullHeight - viewportHeight > 120);
+    };
+
+    updateKeyboardState();
+
+    window.visualViewport?.addEventListener("resize", updateKeyboardState);
+    window.visualViewport?.addEventListener("scroll", updateKeyboardState);
+    window.addEventListener("resize", updateKeyboardState);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateKeyboardState);
+      window.visualViewport?.removeEventListener("scroll", updateKeyboardState);
+      window.removeEventListener("resize", updateKeyboardState);
+    };
+  }, []);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -33,18 +56,23 @@ const MessageInput = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+
     if (!text.trim() && !imagePreview) return;
     if (isSending) return;
 
     setIsSending(true);
+
     try {
       await sendMessage({
         text: text.trim(),
         image: imagePreview,
       });
+
       setText("");
       setImagePreview(null);
+
       if (fileInputRef.current) fileInputRef.current.value = "";
+      inputRef.current?.blur();
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {
@@ -53,7 +81,13 @@ const MessageInput = () => {
   };
 
   return (
-    <div className="px-3 sm:px-4 py-3">
+    <div
+      className={`px-3 sm:px-4 pt-3 ${
+        keyboardOpen
+          ? "pb-2"
+          : "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      }`}
+    >
       {imagePreview && (
         <div className="mb-3 inline-flex relative">
           <img
@@ -88,10 +122,11 @@ const MessageInput = () => {
           <Image className="w-5 h-5 text-base-content/70" />
         </button>
 
-        <div className="flex-1 rounded-2xl border border-base-300 bg-base-100 px-4 py-2 min-h-[44px] flex items-center">
+        <div className="flex-1 rounded-2xl border border-base-300 bg-base-100 px-4 min-h-[44px] flex items-center">
           <input
+            ref={inputRef}
             type="text"
-            className="w-full bg-transparent outline-none text-sm placeholder:text-base-content/40"
+            className="w-full h-11 bg-transparent outline-none text-sm placeholder:text-base-content/40"
             placeholder="Type a message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
