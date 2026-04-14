@@ -54,3 +54,60 @@ A comprehensive, full-stack real-time chat application built using the MERN stac
     │   ├── App.jsx           # Main layout & router configuration
     │   └── main.jsx          # React DOM render
     └── package.json
+
+⚙️ Environment Variables
+To run this project, you will need to add the following environment variables to your .env file in the Backend directory:
+
+Code snippet
+PORT=5002
+NODE_ENV=development
+
+# Database
+MONGO_URI=your_mongodb_connection_string
+
+# Cloudinary (Image Uploads)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# JWT Auth
+JWT_SECRET=your_jwt_secret
+
+# NodeMailer (OTP Verification)
+# Requires SMTP credentials setup for the email service being used.
+🚀 Installation & Local Setup
+Clone the repository:
+
+Bash
+git clone <repository-url>
+cd chat-app
+Install Backend Dependencies:
+
+Bash
+cd Backend
+npm install
+Install Frontend Dependencies:
+
+Bash
+cd ../frontend
+npm install
+Run the Application:
+
+Start Backend (Development Mode):
+
+Bash
+cd Backend
+npm run dev  # assuming nodemon is bound to dev script
+Start Frontend:
+
+Bash
+cd frontend
+npm run dev
+Access the App: Open http://localhost:5173 in your browser.
+
+🌐 Production Deployment
+The backend is configured to serve the frontend static files when NODE_ENV=production.
+
+Build the frontend: cd frontend && npm run build.
+
+Start the backend server: cd Backend && npm start.
