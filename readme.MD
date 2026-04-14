@@ -1,7 +1,3 @@
-Here is a detailed, professional, and ready-to-use `README.md` file for your repository based on the dependencies and environment setup you provided. 
-
-You can copy and paste the block below directly into your project's `README.md` file.
-
 ```markdown
 # Real-Time Chat Application
 
