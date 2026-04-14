@@ -1,4 +1,3 @@
-```markdown
 # Real-Time Chat Application
 
 A full-stack, real-time chat application built with the MERN stack (MongoDB, Express, React, Node.js), Socket.io for live messaging, and modern tools like Zustand, Tailwind CSS, and Redis.
