@@ -55,10 +55,9 @@ A comprehensive, full-stack real-time chat application built using the MERN stac
     │   └── main.jsx          # React DOM render
     └── package.json
 
-⚙️ Environment Variables
+##⚙️ Environment Variables
 To run this project, you will need to add the following environment variables to your .env file in the Backend directory:
 
-Code snippet
 PORT=5002
 NODE_ENV=development
 
@@ -75,7 +74,8 @@ JWT_SECRET=your_jwt_secret
 
 # NodeMailer (OTP Verification)
 # Requires SMTP credentials setup for the email service being used.
-🚀 Installation & Local Setup
+
+##🚀 Installation & Local Setup
 Clone the repository:
 
 Bash
