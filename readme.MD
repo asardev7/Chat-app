@@ -55,7 +55,7 @@ Before you begin, ensure you have the following installed on your local machine:
 * [Node.js](https://nodejs.org/) (v18 or higher recommended)
 * [MongoDB](https://www.mongodb.com/) (Local instance or MongoDB Atlas)
 * [Redis](https://redis.io/) (Local instance or cloud provider)
-* Accounts for [Cloudinary](https://cloudinary.com/), [Brevo](https://www.brevo.com/) (formerly Sendinblue), and a [Giphy API Key](https://developers.giphy.com/).
+* Accounts for [Cloudinary](https://cloudinary.com/), [Brevo](https://www.brevo.com/), and a [Giphy API Key](https://developers.giphy.com/).
 
 ## 🔑 Environment Variables
 
