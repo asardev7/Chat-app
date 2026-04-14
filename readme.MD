@@ -149,4 +149,5 @@ npm run dev
 ## 📝 License
 
 This project is licensed under the [ISC](https://opensource.org/licenses/ISC) License.
+OpenSource
 ```
