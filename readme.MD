@@ -92,7 +92,7 @@ VITE_GIPHY_API_KEY=your_giphy_api_key
 
 ### 1. Clone the repository
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/asardev7/Chat-app.git
 cd chat-app
 ```
 
